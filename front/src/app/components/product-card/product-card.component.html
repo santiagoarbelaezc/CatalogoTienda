@@ -1,0 +1,174 @@
+<div class="glass-card rounded-3xl border border-luxury-800/80 overflow-hidden flex flex-col md:flex-row hover:border-accent-gold/40 hover:shadow-[0_8px_30px_rgb(212,175,55,0.05)] transition-all duration-500 group animate-scale-in">
+  
+  <!-- Left Side: Image Gallery -->
+  <div class="w-full md:w-2/5 p-6 flex flex-col gap-4 bg-luxury-900/50 justify-center">
+    <!-- Main Image Box -->
+    <div class="relative aspect-square w-full rounded-2xl overflow-hidden bg-luxury-950 border border-luxury-800">
+      <!-- Gender/Season Tag -->
+      <div class="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+        <span class="px-3 py-1 bg-luxury-950/80 backdrop-blur-md border border-luxury-800 text-[10px] tracking-widest uppercase font-bold text-accent-gold rounded-full">
+          {{ product.genero }}
+        </span>
+        <span class="px-3 py-1 bg-luxury-950/80 backdrop-blur-md border border-luxury-800 text-[10px] tracking-widest uppercase font-bold text-luxury-400 rounded-full">
+          {{ product.temporada }}
+        </span>
+      </div>
+
+      <!-- Active Image -->
+      <img 
+        [src]="product.imagenes[activeImageIndex].url" 
+        [alt]="product.nombre" 
+        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+    </div>
+
+    <!-- Thumbnails -->
+    <div class="flex gap-2 overflow-x-auto pb-1" *ngIf="product.imagenes.length > 1">
+      <button 
+        *ngFor="let img of product.imagenes; let idx = index" 
+        (click)="activeImageIndex = idx"
+        [class.border-accent-gold]="activeImageIndex === idx"
+        [class.border-luxury-800]="activeImageIndex !== idx"
+        class="w-16 h-16 rounded-xl border-2 overflow-hidden bg-luxury-950 transition-colors flex-shrink-0">
+        <img [src]="img.url" class="w-full h-full object-cover">
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Side: Details & Interaction -->
+  <div class="w-full md:w-3/5 p-6 flex flex-col justify-between gap-6 border-t md:border-t-0 md:border-l border-luxury-800/80">
+    <div>
+      <!-- Header Info -->
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <!-- Categories breadcrumb -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-luxury-400">
+            <span>{{ product.categoria.nombre }}</span>
+            <span class="text-luxury-600">/</span>
+            <span class="text-accent-gold">{{ product.marca.nombre }}</span>
+          </div>
+          <h2 class="text-2xl font-bold mt-1 text-luxury-50 tracking-tight">{{ product.nombre }}</h2>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-luxury-400">Desde</span>
+          <p class="text-2xl font-extrabold text-white tracking-tight">{{ formatPrice(product.precio_base) }}</p>
+        </div>
+      </div>
+
+      <p class="text-sm text-luxury-300 mt-3 leading-relaxed font-light">{{ product.descripcion }}</p>
+
+      <!-- Fabric (Tela) Details -->
+      <div class="mt-4 flex items-center gap-2 p-3 bg-luxury-900/40 rounded-xl border border-luxury-800 text-xs">
+        <span class="material-symbols-rounded text-accent-gold text-lg">checkroom</span>
+        <div>
+          <span class="font-medium text-luxury-200">Tejido: </span>
+          <span class="text-luxury-400">{{ product.tela.nombre }} ({{ product.tela.composicion }})</span>
+        </div>
+      </div>
+
+      <!-- Color Selector -->
+      <div class="mt-6 flex flex-col gap-2">
+        <label class="text-xs font-semibold tracking-wider text-luxury-400 uppercase">Color: <span class="text-luxury-100 font-medium">{{ selectedColor?.nombre }}</span></label>
+        <div class="flex gap-3">
+          <button 
+            *ngFor="let col of availableColors"
+            (click)="selectColor(col)"
+            [style.background-color]="col.hex"
+            [class.ring-2]="selectedColor?.id === col.id"
+            [class.ring-offset-2]="selectedColor?.id === col.id"
+            [class.ring-offset-luxury-950]="selectedColor?.id === col.id"
+            [class.ring-accent-gold]="selectedColor?.id === col.id"
+            class="w-8 h-8 rounded-full border border-luxury-800 hover:scale-110 transition-transform relative">
+            <span *ngIf="col.nombre === 'Blanco Crudo'" class="absolute inset-0 border border-luxury-400/20 rounded-full"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Talla Selector -->
+      <div class="mt-5 flex flex-col gap-2">
+        <label class="text-xs font-semibold tracking-wider text-luxury-400 uppercase">Talla: <span class="text-luxury-100 font-medium">{{ selectedTalla?.nombre }}</span></label>
+        <div class="flex gap-2">
+          <button 
+            *ngFor="let t of availableTallas"
+            (click)="selectTalla(t)"
+            [class.bg-accent-gold]="selectedTalla?.id === t.id"
+            [class.text-luxury-950]="selectedTalla?.id === t.id"
+            [class.border-accent-gold]="selectedTalla?.id === t.id"
+            [class.border-luxury-800]="selectedTalla?.id !== t.id"
+            [class.opacity-40]="selectedColor && !hasVariant(selectedColor, t)"
+            class="w-11 h-11 border rounded-xl flex items-center justify-center font-bold text-sm hover:border-luxury-400 active:scale-95 transition-all">
+            {{ t.nombre }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing Calculator & Actions -->
+    <div class="border-t border-luxury-800/80 pt-6 flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <!-- Stock / SKU Info -->
+        <div class="text-xs">
+          <div *ngIf="selectedVariant" class="flex flex-col gap-1">
+            <span class="text-luxury-400">SKU: <strong class="text-luxury-200 uppercase">{{ selectedVariant.sku }}</strong></span>
+            <div class="flex items-center gap-1.5">
+              <span 
+                [class.bg-emerald-500]="currentStock > 10"
+                [class.bg-amber-500]="currentStock > 0 && currentStock <= 10"
+                [class.bg-rose-500]="currentStock === 0"
+                class="w-2.5 h-2.5 rounded-full inline-block"></span>
+              <span class="font-medium" 
+                [class.text-emerald-400]="currentStock > 10"
+                [class.text-amber-400]="currentStock > 0 && currentStock <= 10"
+                [class.text-rose-400]="currentStock === 0">
+                {{ currentStock === 0 ? 'Agotado' : (currentStock <= 10 ? 'Pocas unidades (' + currentStock + ')' : 'En Stock (' + currentStock + ')') }}
+              </span>
+            </div>
+          </div>
+          <span *ngIf="!selectedVariant" class="text-rose-400 font-semibold">Combinación no disponible</span>
+        </div>
+
+        <!-- Quantity Counter (Only if in stock) -->
+        <div class="flex items-center gap-3 bg-luxury-900 border border-luxury-800 p-1.5 rounded-xl self-start sm:self-auto" *ngIf="selectedVariant && currentStock > 0">
+          <button 
+            (click)="decrementQty()" 
+            [disabled]="quantity <= 1"
+            class="w-8 h-8 rounded-lg hover:bg-luxury-800 text-luxury-200 disabled:opacity-30 transition-colors font-bold text-lg">-</button>
+          <span class="w-10 text-center font-bold text-sm">{{ quantity }}</span>
+          <button 
+            (click)="incrementQty()" 
+            [disabled]="quantity >= currentStock"
+            class="w-8 h-8 rounded-lg hover:bg-luxury-800 text-luxury-200 disabled:opacity-30 transition-colors font-bold text-lg">+</button>
+        </div>
+      </div>
+
+      <!-- Price Total Display -->
+      <div class="flex items-center justify-between p-3.5 bg-luxury-900/80 border border-luxury-800/80 rounded-2xl" *ngIf="selectedVariant && currentStock > 0">
+        <span class="text-xs text-luxury-400">Total a Cotizar:</span>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-[10px] text-luxury-400 font-light">{{ quantity }} x {{ formatPrice(currentPrice) }} =</span>
+          <span class="text-xl font-black text-accent-gold tracking-tight">{{ formatPrice(totalPrice) }}</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <!-- Direct WhatsApp Inquiry -->
+        <button 
+          (click)="sendWhatsAppDirect()"
+          [disabled]="!selectedVariant || currentStock === 0"
+          class="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-500 active:scale-98 transition-all disabled:opacity-30 disabled:pointer-events-none text-sm">
+          <span class="material-symbols-rounded text-lg">chat</span>
+          Consultar por WhatsApp
+        </button>
+
+        <!-- Add to Quote Wishlist -->
+        <button 
+          (click)="emitAddInquiry()"
+          [disabled]="!selectedVariant || currentStock === 0"
+          class="flex-1 flex items-center justify-center gap-2 py-3.5 border border-accent-gold text-accent-gold font-bold rounded-2xl hover:bg-accent-gold hover:text-luxury-950 active:scale-98 transition-all disabled:opacity-30 disabled:pointer-events-none text-sm">
+          <span class="material-symbols-rounded text-lg">add_shopping_cart</span>
+          Agregar a Cotización
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

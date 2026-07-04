@@ -1,0 +1,120 @@
+<!-- Floating Bag Trigger Button -->
+<button 
+  (click)="toggleCart()"
+  [class.scale-100]="items.length > 0"
+  [class.scale-0]="items.length === 0"
+  class="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full bg-accent-gold text-luxury-950 font-bold shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300 group">
+  <span class="material-symbols-rounded text-2xl group-hover:rotate-12 transition-transform">shopping_bag</span>
+  <span class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center border border-luxury-950">
+    {{ totalItemsCount }}
+  </span>
+</button>
+
+<!-- Slide-out Drawer Panel -->
+<div 
+  *ngIf="isOpen"
+  (click)="toggleCart()"
+  class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
+</div>
+
+<aside 
+  [class.translate-x-0]="isOpen"
+  [class.translate-x-full]="!isOpen"
+  class="fixed top-0 right-0 z-50 h-full w-full sm:w-[450px] bg-luxury-950/95 border-l border-luxury-800/80 shadow-2xl transition-transform duration-500 ease-out flex flex-col justify-between">
+  
+  <!-- Drawer Header -->
+  <div class="p-6 border-b border-luxury-800 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <span class="material-symbols-rounded text-accent-gold text-2xl">shopping_bag</span>
+      <h3 class="text-lg font-bold tracking-tight text-white">Tu Cotización</h3>
+      <span class="px-2.5 py-0.5 bg-luxury-900 border border-luxury-800 text-[10px] text-luxury-400 font-bold uppercase rounded-full">
+        {{ items.length }} refs
+      </span>
+    </div>
+    <button 
+      (click)="toggleCart()" 
+      class="w-10 h-10 rounded-xl hover:bg-luxury-900 flex items-center justify-center text-luxury-400 hover:text-white transition-colors">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+  </div>
+
+  <!-- Drawer Items List -->
+  <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+    <!-- Empty State -->
+    <div *ngIf="items.length === 0" class="h-full flex flex-col items-center justify-center text-center gap-4 text-luxury-500">
+      <span class="material-symbols-rounded text-6xl">shopping_bag_disabled</span>
+      <p class="font-medium text-sm">Tu lista de cotización está vacía</p>
+      <p class="text-xs max-w-xs leading-normal">Navega por el catálogo y agrega productos para solicitar tu cotización por WhatsApp.</p>
+    </div>
+
+    <!-- Items -->
+    <div 
+      *ngFor="let item of items; let idx = index" 
+      class="flex gap-4 p-4 bg-luxury-900/40 border border-luxury-850 rounded-2xl relative hover:border-luxury-800 transition-colors">
+      
+      <!-- Product Main Thumbnail -->
+      <div class="w-16 h-16 rounded-xl overflow-hidden bg-luxury-950 border border-luxury-800 flex-shrink-0">
+        <img [src]="item.product.imagenes[0].url" class="w-full h-full object-cover">
+      </div>
+
+      <!-- Info Details -->
+      <div class="flex-1 flex flex-col justify-between">
+        <div>
+          <h4 class="text-sm font-semibold text-white leading-tight line-clamp-1">{{ item.product.nombre }}</h4>
+          <span class="text-[10px] text-luxury-400 uppercase tracking-wider">{{ item.product.marca.nombre }}</span>
+          
+          <!-- Variant Spec Badges -->
+          <div class="flex flex-wrap items-center gap-2 mt-1.5">
+            <!-- Color badge -->
+            <span class="flex items-center gap-1.5 px-2 py-0.5 bg-luxury-900 border border-luxury-800 text-[10px] text-luxury-300 rounded-full font-medium">
+              <span [style.background-color]="item.variant.color.hex" class="w-2 h-2 rounded-full border border-white/20"></span>
+              {{ item.variant.color.nombre }}
+            </span>
+            <!-- Size badge -->
+            <span class="px-2 py-0.5 bg-luxury-900 border border-luxury-800 text-[10px] text-luxury-300 rounded-full font-bold">
+              Talla: {{ item.variant.talla.nombre }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-3">
+          <span class="text-xs text-luxury-400 font-light">Cant: <strong class="text-white font-semibold">{{ item.quantity }}</strong></span>
+          <span class="text-sm font-bold text-accent-gold">{{ formatPrice(item.variant.precio * item.quantity) }}</span>
+        </div>
+      </div>
+
+      <!-- Delete Button -->
+      <button 
+        (click)="remove(idx)"
+        class="absolute top-3 right-3 text-luxury-500 hover:text-rose-500 transition-colors">
+        <span class="material-symbols-rounded text-lg">delete</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Drawer Footer (Sticky) -->
+  <div class="p-6 border-t border-luxury-800 bg-luxury-950" *ngIf="items.length > 0">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm text-luxury-400 font-medium">Valor Estimado Total:</span>
+      <span class="text-2xl font-black text-white tracking-tight">{{ formatPrice(totalAmount) }}</span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <!-- WhatsApp Bulk Quoting Button -->
+      <button 
+        (click)="sendBulkWhatsApp()"
+        class="w-full flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl active:scale-98 transition-all text-sm">
+        <span class="material-symbols-rounded">chat</span>
+        Enviar Cotización a WhatsApp
+      </button>
+
+      <!-- Clear All -->
+      <button 
+        (click)="clearAll.emit(); toggleCart()"
+        class="w-full py-2.5 bg-transparent text-luxury-500 hover:text-luxury-300 font-medium text-xs rounded-xl hover:bg-luxury-900/40 transition-colors">
+        Vaciar lista
+      </button>
+    </div>
+  </div>
+
+</aside>
