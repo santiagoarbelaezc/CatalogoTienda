@@ -1,0 +1,95 @@
+<!-- Header / Navbar -->
+<header class="catalog-header">
+  <div class="header-brand">
+    <div class="brand-icon">CT</div>
+    <div>
+      <h1 class="brand-name">Catálogo</h1>
+      <span class="brand-sub">Tienda Íntima</span>
+    </div>
+  </div>
+
+  <nav class="header-nav">
+    <a href="#" class="nav-link active">Catálogo</a>
+    <a href="#" class="nav-link">Colecciones</a>
+    <a href="#" class="nav-link">Nosotros</a>
+    <a href="#" class="nav-link">Contacto</a>
+  </nav>
+
+  <div class="header-right">
+    <a routerLink="/admin/login" class="admin-link" id="nav-login-btn">
+      <span class="material-symbols-rounded">login</span>
+      Ingresar
+    </a>
+  </div>
+</header>
+
+<!-- Hero Section -->
+<section class="catalog-hero">
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="live-dot"></span>
+      Nueva Colección 2026
+    </div>
+    <h2 class="hero-title">
+      Viste la Elegancia<br>
+      <span class="hero-accent">Atemporal</span>
+    </h2>
+    <p class="hero-sub">
+      Explora prendas exclusivas confeccionadas con materiales de la más alta calidad.
+      Selecciona tus variantes y cotiza directo a tu WhatsApp.
+    </p>
+  </div>
+</section>
+
+<!-- Catalog Section -->
+<main class="catalog-main">
+  <section class="catalog-section">
+
+    <app-catalog-filters
+      (filtersChanged)="handleFiltersChanged($event)"
+      class="filters-col">
+    </app-catalog-filters>
+
+    <div class="products-col">
+      <div class="products-toolbar">
+        <p class="results-info">
+          Mostrando <strong>{{ filteredProducts.length }}</strong> de <strong>{{ allProducts.length }}</strong> productos
+        </p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredProducts.length === 0">
+        <span class="material-symbols-rounded">search_off</span>
+        <h4>No se encontraron productos</h4>
+        <p>Prueba ajustando los filtros de búsqueda.</p>
+      </div>
+
+      <!-- Product List -->
+      <div class="product-list" *ngIf="filteredProducts.length > 0">
+        <app-product-card
+          *ngFor="let prod of filteredProducts"
+          [product]="prod"
+          (addToInquiry)="handleAddToInquiry($event)">
+        </app-product-card>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- Floating Inquiry Cart -->
+<app-cart-inquiry
+  [items]="inquiryItems"
+  (removeItem)="handleRemoveItem($event)"
+  (clearAll)="handleClearAll()">
+</app-cart-inquiry>
+
+<!-- Footer -->
+<footer class="catalog-footer">
+  <div class="footer-brand">
+    <span>Catálogo</span>
+    <span class="sep">·</span>
+    <span>Tienda Íntima</span>
+  </div>
+  <p>© 2026 Catálogo Tienda Íntima. Todos los derechos reservados.</p>
+</footer>

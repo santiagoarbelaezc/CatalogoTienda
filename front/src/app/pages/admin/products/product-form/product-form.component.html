@@ -1,0 +1,173 @@
+<div class="product-form-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a routerLink="/admin/products" class="breadcrumb-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        Productos
+      </a>
+      <span class="breadcrumb-sep">/</span>
+      <span>{{ isEditMode ? 'Editar Producto' : 'Nuevo Producto' }}</span>
+    </div>
+    <h1 class="page-title">{{ isEditMode ? 'Editar Producto' : 'Crear Producto' }}</h1>
+  </div>
+
+  <form (ngSubmit)="save()" class="form-layout">
+
+    <!-- Left column: main info -->
+    <div class="form-main">
+
+      <!-- Basic Info -->
+      <div class="form-section card">
+        <h3 class="section-title">Información General</h3>
+
+        <div class="field">
+          <label class="form-label" for="prod-nombre">Nombre del Producto *</label>
+          <input id="prod-nombre" type="text" [(ngModel)]="nombre" name="nombre" required
+                 class="form-input" placeholder="Ej: Camiseta Pima Essential">
+        </div>
+
+        <div class="field">
+          <label class="form-label" for="prod-desc">Descripción</label>
+          <textarea id="prod-desc" [(ngModel)]="descripcion" name="descripcion"
+                    class="form-input form-textarea" rows="4"
+                    placeholder="Describe el producto..."></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="form-label" for="prod-precio">Precio Base (COP) *</label>
+            <input id="prod-precio" type="number" [(ngModel)]="precioBase" name="precioBase" required
+                   class="form-input" placeholder="89000" min="0">
+          </div>
+
+          <div class="field">
+            <label class="form-label" for="prod-genero">Género</label>
+            <select id="prod-genero" [(ngModel)]="genero" name="genero" class="form-select">
+              <option value="Unisex">Unisex</option>
+              <option value="Hombre">Hombre</option>
+              <option value="Mujer">Mujer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="form-label" for="prod-temporada">Temporada</label>
+          <input id="prod-temporada" type="text" [(ngModel)]="temporada" name="temporada"
+                 class="form-input" placeholder="Ej: Primavera-Verano">
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div class="form-section card">
+        <div class="section-header">
+          <h3 class="section-title">Variantes</h3>
+          <button type="button" class="btn-add-variant" (click)="addVariant()">
+            <span class="material-symbols-rounded">add</span>
+            Agregar variante
+          </button>
+        </div>
+
+        <div class="variants-list">
+          <div class="variant-row" *ngFor="let v of variantes; let i = index">
+            <span class="variant-num">{{ i + 1 }}</span>
+
+            <div class="variant-fields">
+              <div class="field">
+                <label class="form-label">SKU</label>
+                <input type="text" [(ngModel)]="v.sku" [name]="'sku-' + i"
+                       class="form-input" placeholder="SKU-001">
+              </div>
+              <div class="field">
+                <label class="form-label">Color</label>
+                <select [(ngModel)]="v.colorId" [name]="'color-' + i" class="form-select">
+                  <option *ngFor="let c of colores" [ngValue]="c.id">{{ c.nombre }}</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="form-label">Talla</label>
+                <select [(ngModel)]="v.tallaId" [name]="'talla-' + i" class="form-select">
+                  <option *ngFor="let t of tallas" [ngValue]="t.id">{{ t.nombre }}</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="form-label">Precio (COP)</label>
+                <input type="number" [(ngModel)]="v.precio" [name]="'precio-' + i"
+                       class="form-input" [placeholder]="precioBase || 0" min="0">
+              </div>
+              <div class="field">
+                <label class="form-label">Stock</label>
+                <input type="number" [(ngModel)]="v.stock" [name]="'stock-' + i"
+                       class="form-input" placeholder="0" min="0">
+              </div>
+            </div>
+
+            <button type="button" class="btn-remove-variant" (click)="removeVariant(i)"
+                    [disabled]="variantes.length === 1" title="Eliminar variante">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column: metadata + actions -->
+    <div class="form-sidebar">
+
+      <!-- Classification -->
+      <div class="form-section card">
+        <h3 class="section-title">Clasificación</h3>
+
+        <div class="field">
+          <label class="form-label" for="prod-categoria">Categoría *</label>
+          <select id="prod-categoria" [(ngModel)]="categoriaId" name="categoriaId" required class="form-select">
+            <option [ngValue]="null" disabled>Seleccionar categoría</option>
+            <option *ngFor="let c of categorias" [ngValue]="c.id">{{ c.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="form-label" for="prod-marca">Marca</label>
+          <select id="prod-marca" [(ngModel)]="marcaId" name="marcaId" class="form-select">
+            <option *ngFor="let m of marcas" [ngValue]="m.id">{{ m.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="form-label" for="prod-tela">Material / Tela</label>
+          <select id="prod-tela" [(ngModel)]="telaId" name="telaId" class="form-select">
+            <option *ngFor="let t of telas" [ngValue]="t.id">{{ t.nombre }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="form-section card">
+        <h3 class="section-title">Estado</h3>
+        <label class="toggle-row">
+          <span class="toggle-label">
+            <span class="material-symbols-rounded">{{ activo ? 'visibility' : 'visibility_off' }}</span>
+            {{ activo ? 'Producto activo' : 'Producto inactivo' }}
+          </span>
+          <button type="button" class="toggle-switch" [class.on]="activo" (click)="activo = !activo">
+            <span class="toggle-thumb"></span>
+          </button>
+        </label>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" [disabled]="isSaving" id="save-product-btn">
+          <span class="material-symbols-rounded" *ngIf="!isSaving">save</span>
+          <span class="spinner" *ngIf="isSaving"></span>
+          {{ isSaving ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Crear Producto') }}
+        </button>
+        <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      </div>
+
+    </div>
+
+  </form>
+</div>

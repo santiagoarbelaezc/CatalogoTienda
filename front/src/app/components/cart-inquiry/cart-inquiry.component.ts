@@ -13,6 +13,7 @@ export interface InquiryItem {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './cart-inquiry.component.html',
+  styleUrls: ['./cart-inquiry.component.scss'],
 })
 export class CartInquiryComponent {
   @Input() items: InquiryItem[] = [];

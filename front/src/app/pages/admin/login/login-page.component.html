@@ -1,0 +1,94 @@
+<div class="login-root">
+
+  <!-- Left Panel: Brand -->
+  <div class="brand-panel">
+    <div class="brand-content">
+      <div class="brand-logo">
+        <span class="material-symbols-rounded text-4xl">style</span>
+      </div>
+      <h1 class="brand-name">Catálogo<br><span>Tienda Íntima</span></h1>
+      <p class="brand-tagline">Panel de administración para gestionar tu catálogo de productos, categorías y más.</p>
+
+      <div class="brand-features">
+        <div class="feature-item" *ngFor="let f of features">
+          <span class="material-symbols-rounded">{{ f.icon }}</span>
+          <span>{{ f.text }}</span>
+        </div>
+      </div>
+    </div>
+    <!-- Decorative blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <!-- Right Panel: Form -->
+  <div class="form-panel">
+    <div class="form-card animate-fade-in-up">
+
+      <!-- Header -->
+      <div class="form-header">
+        <div class="form-logo">
+          <span class="material-symbols-rounded">admin_panel_settings</span>
+        </div>
+        <h2>Bienvenido de nuevo</h2>
+        <p>Ingresa al panel de administración</p>
+      </div>
+
+      <!-- Form -->
+      <form (submit)="onLogin($event)" class="form-body">
+
+        <div class="form-group">
+          <label class="form-label">Usuario</label>
+          <div class="input-wrapper">
+            <span class="material-symbols-rounded input-icon">person</span>
+            <input
+              id="login-username"
+              type="text"
+              class="form-input"
+              placeholder="Administrador"
+              value="admin"
+              readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <div class="input-wrapper">
+            <span class="material-symbols-rounded input-icon">lock</span>
+            <input
+              id="login-password"
+              type="password"
+              class="form-input"
+              placeholder="••••••••"
+              value="admin"
+              readonly>
+          </div>
+        </div>
+
+        <button
+          id="login-submit"
+          type="button"
+          (click)="onLogin($event)"
+          class="login-btn"
+          [disabled]="isLoading">
+          <span *ngIf="!isLoading" class="btn-content">
+            <span class="material-symbols-rounded">login</span>
+            Ingresar al Panel
+          </span>
+          <span *ngIf="isLoading" class="btn-loading">
+            <span class="spinner"></span>
+            Ingresando...
+          </span>
+        </button>
+
+        <p class="hint-text">
+          <span class="material-symbols-rounded">info</span>
+          Haz clic en "Ingresar" para acceder al panel
+        </p>
+
+      </form>
+
+    </div>
+  </div>
+
+</div>

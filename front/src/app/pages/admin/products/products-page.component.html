@@ -1,0 +1,127 @@
+<div class="products-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Productos</h1>
+      <p class="page-subtitle">{{ allProducts.length }} productos en el catálogo</p>
+    </div>
+    <a routerLink="/admin/products/new" class="btn-primary" id="add-product-btn">
+      <span class="material-symbols-rounded">add</span>
+      Nuevo Producto
+    </a>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar card">
+    <div class="search-wrapper">
+      <span class="material-symbols-rounded search-icon">search</span>
+      <input
+        id="products-search"
+        type="text"
+        [(ngModel)]="searchQuery"
+        (input)="applySearch()"
+        placeholder="Buscar por nombre o categoría..."
+        class="search-input">
+    </div>
+    <span class="results-count">{{ filteredProducts.length }} resultados</span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card card">
+    <div class="table-wrapper" *ngIf="filteredProducts.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Precio Base</th>
+            <th>Variantes</th>
+            <th>Stock Total</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let product of filteredProducts">
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">
+                  <img [src]="product.imagenes[0].url" [alt]="product.nombre" class="thumb-img">
+                </div>
+                <div class="product-info">
+                  <span class="product-name">{{ product.nombre }}</span>
+                  <span class="product-brand">{{ product.marca.nombre }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge-neutral">{{ product.categoria.nombre }}</span>
+            </td>
+            <td class="font-semibold text-ink">{{ formatPrice(product.precio_base) }}</td>
+            <td>
+              <span class="badge-neutral">{{ product.variantes.length }}</span>
+            </td>
+            <td>
+              <span
+                class="stock-badge"
+                [class.low]="getTotalStock(product) > 0 && getTotalStock(product) <= 10"
+                [class.empty]="getTotalStock(product) === 0">
+                {{ getTotalStock(product) }}
+              </span>
+            </td>
+            <td>
+              <button
+                class="toggle-active"
+                [class.is-active]="product.activo"
+                (click)="toggleActive(product)"
+                [title]="product.activo ? 'Desactivar' : 'Activar'">
+                <span class="toggle-dot"></span>
+                {{ product.activo ? 'Activo' : 'Inactivo' }}
+              </button>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <a
+                  [routerLink]="['/admin/products', product.id, 'edit']"
+                  class="btn-icon"
+                  title="Editar">
+                  <span class="material-symbols-rounded">edit</span>
+                </a>
+                <button
+                  class="btn-icon btn-delete"
+                  (click)="confirmDelete(product.id)"
+                  title="Eliminar">
+                  <span class="material-symbols-rounded">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" *ngIf="filteredProducts.length === 0">
+      <span class="material-symbols-rounded">inventory_2</span>
+      <h4>No se encontraron productos</h4>
+      <p>Ajusta la búsqueda o <a routerLink="/admin/products/new">crea un nuevo producto</a>.</p>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
+    <div class="modal-card animate-scale-in">
+      <div class="modal-icon">
+        <span class="material-symbols-rounded">delete_forever</span>
+      </div>
+      <h3>¿Eliminar producto?</h3>
+      <p>Esta acción es irreversible. El producto será eliminado del catálogo.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="cancelDelete()">Cancelar</button>
+        <button class="btn-danger" (click)="executeDelete()" id="confirm-delete-btn">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+</div>

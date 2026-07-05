@@ -1,0 +1,142 @@
+<div class="categories-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Categorías</h1>
+      <p class="page-subtitle">Organiza tu catálogo en categorías y subcategorías</p>
+    </div>
+  </div>
+
+  <div class="content-grid">
+
+    <!-- Left: Category Tree -->
+    <div class="tree-card card">
+      <div class="tree-header">
+        <h3 class="section-title">Árbol de Categorías</h3>
+        <span class="count-badge">{{ categories.length }} categorías</span>
+      </div>
+
+      <div class="tree-body">
+        <div *ngFor="let cat of parentCategories" class="category-group">
+
+          <!-- Parent Category -->
+          <div class="category-row parent-row">
+            <span class="material-symbols-rounded cat-icon">folder</span>
+            <div class="cat-info" *ngIf="editingId !== cat.id">
+              <span class="cat-name parent-name">{{ cat.nombre }}</span>
+              <span class="cat-sub-count" *ngIf="cat.subcategorias?.length">
+                {{ cat.subcategorias?.length }} subcategorías
+              </span>
+            </div>
+            <div class="cat-edit-inline" *ngIf="editingId === cat.id">
+              <input type="text" [(ngModel)]="editingName" class="edit-input" (keyup.enter)="saveEdit()">
+            </div>
+            <div class="cat-actions">
+              <ng-container *ngIf="editingId !== cat.id">
+                <button class="btn-icon" (click)="startEdit(cat)" title="Editar">
+                  <span class="material-symbols-rounded">edit</span>
+                </button>
+                <button class="btn-icon btn-del" (click)="confirmDelete(cat.id)" title="Eliminar">
+                  <span class="material-symbols-rounded">delete</span>
+                </button>
+              </ng-container>
+              <ng-container *ngIf="editingId === cat.id">
+                <button class="btn-icon btn-save" (click)="saveEdit()" title="Guardar">
+                  <span class="material-symbols-rounded">check</span>
+                </button>
+                <button class="btn-icon" (click)="cancelEdit()" title="Cancelar">
+                  <span class="material-symbols-rounded">close</span>
+                </button>
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- Subcategories -->
+          <div class="subcategory-list" *ngIf="cat.subcategorias?.length">
+            <div class="category-row sub-row" *ngFor="let sub of cat.subcategorias">
+              <span class="tree-line"></span>
+              <span class="material-symbols-rounded cat-icon sub-icon">label</span>
+              <div class="cat-info" *ngIf="editingId !== sub.id">
+                <span class="cat-name">{{ sub.nombre }}</span>
+              </div>
+              <div class="cat-edit-inline" *ngIf="editingId === sub.id">
+                <input type="text" [(ngModel)]="editingName" class="edit-input" (keyup.enter)="saveEdit()">
+              </div>
+              <div class="cat-actions">
+                <ng-container *ngIf="editingId !== sub.id">
+                  <button class="btn-icon" (click)="startEdit(sub)" title="Editar">
+                    <span class="material-symbols-rounded">edit</span>
+                  </button>
+                  <button class="btn-icon btn-del" (click)="confirmDelete(sub.id)" title="Eliminar">
+                    <span class="material-symbols-rounded">delete</span>
+                  </button>
+                </ng-container>
+                <ng-container *ngIf="editingId === sub.id">
+                  <button class="btn-icon btn-save" (click)="saveEdit()">
+                    <span class="material-symbols-rounded">check</span>
+                  </button>
+                  <button class="btn-icon" (click)="cancelEdit()">
+                    <span class="material-symbols-rounded">close</span>
+                  </button>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-tree" *ngIf="parentCategories.length === 0">
+          <span class="material-symbols-rounded">category</span>
+          <p>No hay categorías aún</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Create Form -->
+    <div class="form-sidebar">
+      <div class="form-section card">
+        <h3 class="section-title">Nueva Categoría</h3>
+
+        <div class="field">
+          <label class="form-label" for="cat-nombre">Nombre *</label>
+          <input id="cat-nombre" type="text" [(ngModel)]="newName"
+                 class="form-input" placeholder="Ej: Lencería"
+                 (keyup.enter)="createCategory()">
+        </div>
+
+        <div class="field">
+          <label class="form-label" for="cat-parent">Categoría padre (opcional)</label>
+          <select id="cat-parent" [(ngModel)]="newParentId" class="form-select">
+            <option [ngValue]="null">— Categoría principal —</option>
+            <option *ngFor="let c of parentCategories" [ngValue]="c.id">{{ c.nombre }}</option>
+          </select>
+        </div>
+
+        <button type="button" class="btn-primary" (click)="createCategory()"
+                [disabled]="!newName.trim()" id="create-category-btn">
+          <span class="material-symbols-rounded">add</span>
+          Crear Categoría
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
+    <div class="modal-card animate-scale-in">
+      <div class="modal-icon">
+        <span class="material-symbols-rounded">delete_forever</span>
+      </div>
+      <h3>¿Eliminar categoría?</h3>
+      <p>Se eliminará junto con sus subcategorías.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="deleteConfirmId = null">Cancelar</button>
+        <button class="btn-danger" (click)="executeDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+</div>

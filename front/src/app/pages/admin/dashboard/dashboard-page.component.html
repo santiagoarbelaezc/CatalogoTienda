@@ -1,0 +1,86 @@
+<div class="dashboard animate-fade-in">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Resumen General</h1>
+      <p class="page-subtitle">Aquí tienes un vistazo de cómo va el rendimiento de <strong>Catálogo Tienda Íntima</strong> hoy.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/admin/products/new" class="btn-primary" id="new-product-btn">
+        <span class="material-symbols-rounded">add</span>
+        Nuevo Producto
+      </a>
+      <button class="btn-secondary" id="reports-btn">
+        <span class="material-symbols-rounded">bar_chart</span>
+        Ver Reportes
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="stat-card" *ngFor="let kpi of kpis; let i = index" [style.animation-delay]="i * 60 + 'ms'">
+      <div class="stat-header">
+        <span class="stat-title">{{ kpi.title }}</span>
+        <span class="stat-icon material-symbols-rounded">{{ kpi.icon }}</span>
+      </div>
+      <div class="stat-value">{{ kpi.value }}</div>
+      <div class="stat-trend" [class.positive]="kpi.trend > 0" [class.negative]="kpi.trend < 0">
+        <span class="material-symbols-rounded trend-arrow">
+          {{ kpi.trend > 0 ? 'trending_up' : 'trending_down' }}
+        </span>
+        <span>{{ kpi.trend > 0 ? '+' : '' }}{{ kpi.trend }}%</span>
+        <span class="trend-label">{{ kpi.trendLabel }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+
+    <!-- Sales Evolution Chart -->
+    <div class="chart-card card">
+      <div class="chart-card-header">
+        <div>
+          <h3 class="chart-title">Evolución de Ventas</h3>
+          <p class="chart-subtitle">Ingresos diarios en los últimos 30 días</p>
+        </div>
+        <span class="trend-badge">
+          <span class="material-symbols-rounded">trending_up</span>
+          Tendencia positiva
+        </span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas #salesChart></canvas>
+      </div>
+    </div>
+
+    <!-- Top Products -->
+    <div class="top-products card">
+      <div class="top-products-header">
+        <h3 class="chart-title">Top Productos</h3>
+        <a routerLink="/admin/products" class="link-all">Ver todos</a>
+      </div>
+      <div class="product-list">
+        <div class="product-row" *ngFor="let p of topProducts; let i = index">
+          <div class="product-rank">
+            <span class="rank-badge" [class.gold]="i===0" [class.silver]="i===1" [class.bronze]="i===2">
+              #{{ i + 1 }}
+            </span>
+          </div>
+          <div class="product-info">
+            <span class="product-name">{{ p.nombre }}</span>
+            <span class="product-meta">{{ p.categoria.nombre }} · Stock {{ getProductStock(p) }}</span>
+          </div>
+          <div class="product-stats">
+            <span class="product-sales">{{ getProductStock(p) }} uds.</span>
+            <span class="product-price">{{ formatPrice(p.precio_base) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

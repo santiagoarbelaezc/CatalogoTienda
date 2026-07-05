@@ -23,70 +23,38 @@ export interface CatalogFilters {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './catalog-filters.component.html',
+  styleUrls: ['./catalog-filters.component.scss'],
 })
 export class CatalogFiltersComponent implements OnInit {
   @Output() filtersChanged = new EventEmitter<CatalogFilters>();
 
-  // Data lists
   categorias = CATEGORIAS;
   marcas = MARCAS;
   telas = TELAS;
   colores = COLORES;
   tallas = TALLAS;
 
-  // Filter model
   filters: CatalogFilters = {
-    searchQuery: '',
-    categoriaId: null,
-    marcaId: null,
-    genero: '',
-    temporada: '',
-    telaId: null,
-    colorId: null,
-    tallaId: null,
-    minPrice: null,
-    maxPrice: null,
-    sortBy: 'name-asc'
+    searchQuery: '', categoriaId: null, marcaId: null, genero: '',
+    temporada: '', telaId: null, colorId: null, tallaId: null,
+    minPrice: null, maxPrice: null, sortBy: 'name-asc'
   };
 
   isMobileFiltersOpen = false;
 
-  ngOnInit() {
-    this.emitFilters();
-  }
+  ngOnInit() { this.emitFilters(); }
 
-  emitFilters() {
-    this.filtersChanged.emit({ ...this.filters });
-  }
+  emitFilters() { this.filtersChanged.emit({ ...this.filters }); }
 
-  selectCategory(id: number | null) {
-    this.filters.categoriaId = id;
-    this.emitFilters();
-  }
-
-  selectColor(id: number | null) {
-    this.filters.colorId = this.filters.colorId === id ? null : id; // Toggle
-    this.emitFilters();
-  }
-
-  selectTalla(id: number | null) {
-    this.filters.tallaId = this.filters.tallaId === id ? null : id; // Toggle
-    this.emitFilters();
-  }
+  selectCategory(id: number | null) { this.filters.categoriaId = id; this.emitFilters(); }
+  selectColor(id: number | null) { this.filters.colorId = this.filters.colorId === id ? null : id; this.emitFilters(); }
+  selectTalla(id: number | null) { this.filters.tallaId = this.filters.tallaId === id ? null : id; this.emitFilters(); }
 
   resetFilters() {
     this.filters = {
-      searchQuery: '',
-      categoriaId: null,
-      marcaId: null,
-      genero: '',
-      temporada: '',
-      telaId: null,
-      colorId: null,
-      tallaId: null,
-      minPrice: null,
-      maxPrice: null,
-      sortBy: 'name-asc'
+      searchQuery: '', categoriaId: null, marcaId: null, genero: '',
+      temporada: '', telaId: null, colorId: null, tallaId: null,
+      minPrice: null, maxPrice: null, sortBy: 'name-asc'
     };
     this.emitFilters();
   }

@@ -1,0 +1,74 @@
+<div class="shell-root" [class.collapsed]="isSidebarCollapsed">
+
+  <!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+  <nav class="sidebar">
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <span class="material-symbols-rounded">style</span>
+      </div>
+      <div class="brand-text" *ngIf="!isSidebarCollapsed">
+        <span class="brand-title">Catálogo</span>
+        <span class="brand-sub">Tienda Íntima</span>
+      </div>
+      <button class="collapse-btn" (click)="toggleSidebar()" id="sidebar-toggle">
+        <span class="material-symbols-rounded">
+          {{ isSidebarCollapsed ? 'chevron_right' : 'chevron_left' }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Nav Items -->
+    <ul class="nav-list">
+      <li *ngFor="let item of navItems">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          class="nav-item"
+          [title]="isSidebarCollapsed ? item.label : ''">
+          <span class="material-symbols-rounded nav-icon">{{ item.icon }}</span>
+          <span class="nav-label" *ngIf="!isSidebarCollapsed">{{ item.label }}</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Bottom link -->
+    <div class="sidebar-footer">
+      <a routerLink="/" class="nav-item view-store" [title]="isSidebarCollapsed ? 'Ver tienda' : ''">
+        <span class="material-symbols-rounded nav-icon">open_in_new</span>
+        <span class="nav-label" *ngIf="!isSidebarCollapsed">Ver tienda pública</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN AREA ════════════════════════════════════════ -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="live-dot"></span>
+        <span class="topbar-label">Panel de Administración en Vivo</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-info" *ngIf="currentUser">
+          <div class="user-text">
+            <span class="user-name">{{ currentUser.nombre }}</span>
+            <span class="user-role">{{ currentUser.rol }}</span>
+          </div>
+          <div class="user-avatar">{{ currentUser.avatar }}</div>
+        </div>
+        <button class="btn-icon logout-btn" (click)="logout()" title="Cerrar sesión" id="logout-btn">
+          <span class="material-symbols-rounded">logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+</div>
