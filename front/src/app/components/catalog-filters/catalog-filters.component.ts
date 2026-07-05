@@ -2,7 +2,8 @@ import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Categoria, Marca, Tela, Color, Talla } from '../../models/catalog.models';
-import { CATEGORIAS, MARCAS, TELAS, COLORES, TALLAS } from '../../data/mock-data';
+import { CATEGORIAS, TELAS, COLORES, TALLAS } from '../../data/mock-data';
+import { BrandsService } from '../../core/brands.service';
 
 export interface CatalogFilters {
   searchQuery: string;
@@ -29,7 +30,7 @@ export class CatalogFiltersComponent implements OnInit {
   @Output() filtersChanged = new EventEmitter<CatalogFilters>();
 
   categorias = CATEGORIAS;
-  marcas = MARCAS;
+  marcas: Marca[] = [];
   telas = TELAS;
   colores = COLORES;
   tallas = TALLAS;
@@ -42,7 +43,12 @@ export class CatalogFiltersComponent implements OnInit {
 
   isMobileFiltersOpen = false;
 
-  ngOnInit() { this.emitFilters(); }
+  constructor(private brandsService: BrandsService) {}
+
+  ngOnInit() {
+    this.brandsService.brands$.subscribe(list => this.marcas = list);
+    this.emitFilters();
+  }
 
   emitFilters() { this.filtersChanged.emit({ ...this.filters }); }
 

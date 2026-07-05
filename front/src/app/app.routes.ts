@@ -60,6 +60,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin/categories/categories-page.component').then(m => m.CategoriesPageComponent)
       },
+
+      // Brands
+      {
+        path: 'brands',
+        loadComponent: () =>
+          import('./pages/admin/brands/brands-page.component').then(m => m.BrandsPageComponent)
+      },
     ]
   },
 

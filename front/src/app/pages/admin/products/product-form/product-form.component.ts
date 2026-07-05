@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { CatalogService } from '../../../../core/catalog.service';
 import { CategoriesService } from '../../../../core/categories.service';
-import { Producto, Categoria, Variante, Color, Talla } from '../../../../models/catalog.models';
-import { MARCAS, TELAS, COLORES, TALLAS } from '../../../../data/mock-data';
+import { BrandsService } from '../../../../core/brands.service';
+import { Producto, Categoria, Variante, Color, Talla, Marca } from '../../../../models/catalog.models';
+import { TELAS, COLORES, TALLAS } from '../../../../data/mock-data';
 
 interface VarianteForm {
   sku: string;
@@ -42,7 +43,7 @@ export class ProductFormComponent implements OnInit {
 
   // Options
   categorias: Categoria[] = [];
-  marcas = MARCAS;
+  marcas: Marca[] = [];
   telas = TELAS;
   colores = COLORES;
   tallas = TALLAS;
@@ -52,12 +53,14 @@ export class ProductFormComponent implements OnInit {
   constructor(
     private catalogService: CatalogService,
     private categoriesService: CategoriesService,
+    private brandsService: BrandsService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit() {
     this.categorias = this.categoriesService.getAllFlat();
+    this.brandsService.brands$.subscribe(list => this.marcas = list);
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {

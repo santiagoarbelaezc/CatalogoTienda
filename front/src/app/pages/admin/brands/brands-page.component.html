@@ -1,0 +1,94 @@
+<div class="brands-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Marcas</h1>
+      <p class="page-subtitle">Gestiona las marcas disponibles para asociar a tus productos</p>
+    </div>
+  </div>
+
+  <div class="content-grid">
+
+    <!-- Left: Brands List -->
+    <div class="list-card card">
+      <div class="list-header">
+        <h3 class="section-title">Listado de Marcas</h3>
+        <span class="count-badge">{{ brands.length }} marcas</span>
+      </div>
+
+      <div class="list-body">
+        <div *ngFor="let marca of brands" class="brand-row">
+          <span class="material-symbols-rounded brand-icon">style</span>
+          <div class="brand-info" *ngIf="editingId !== marca.id">
+            <span class="brand-name">{{ marca.nombre }}</span>
+          </div>
+          <div class="brand-edit-inline" *ngIf="editingId === marca.id">
+            <input type="text" [(ngModel)]="editingName" class="edit-input" (keyup.enter)="saveEdit()">
+          </div>
+          <div class="brand-actions">
+            <ng-container *ngIf="editingId !== marca.id">
+              <button class="btn-icon" (click)="startEdit(marca)" title="Editar">
+                <span class="material-symbols-rounded">edit</span>
+              </button>
+              <button class="btn-icon btn-del" (click)="confirmDelete(marca.id)" title="Eliminar">
+                <span class="material-symbols-rounded">delete</span>
+              </button>
+            </ng-container>
+            <ng-container *ngIf="editingId === marca.id">
+              <button class="btn-icon btn-save" (click)="saveEdit()" title="Guardar">
+                <span class="material-symbols-rounded">check</span>
+              </button>
+              <button class="btn-icon" (click)="cancelEdit()" title="Cancelar">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-list" *ngIf="brands.length === 0">
+          <span class="material-symbols-rounded">style</span>
+          <p>No hay marcas creadas aún</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Create Form -->
+    <div class="form-sidebar">
+      <div class="form-section card">
+        <h3 class="section-title">Nueva Marca</h3>
+
+        <div class="field">
+          <label class="form-label" for="brand-nombre">Nombre de la Marca *</label>
+          <input id="brand-nombre" type="text" [(ngModel)]="newName"
+                 class="form-input" placeholder="Ej: Atelier Premium"
+                 (keyup.enter)="createBrand()">
+        </div>
+
+        <button type="button" class="btn-primary" (click)="createBrand()"
+                [disabled]="!newName.trim()" id="create-brand-btn">
+          <span class="material-symbols-rounded">add</span>
+          Crear Marca
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
+    <div class="modal-card animate-scale-in">
+      <div class="modal-icon">
+        <span class="material-symbols-rounded">delete_forever</span>
+      </div>
+      <h3>¿Eliminar marca?</h3>
+      <p>Esta acción eliminará la marca del catálogo de opciones disponibles.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="deleteConfirmId = null">Cancelar</button>
+        <button class="btn-danger" (click)="executeDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
