@@ -20,6 +20,10 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
   searchQuery = '';
   deleteConfirmId: number | null = null;
 
+  // Batch selection
+  selectedIds: Set<number> = new Set<number>();
+  showBatchDeleteModal = false;
+
   private sub!: Subscription;
 
   constructor(private catalogService: CatalogService, private toast: ToastService) {}
@@ -44,6 +48,58 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
           p.categoria.nombre.toLowerCase().includes(q)
         )
       : [...this.allProducts];
+
+    // Clean up selectedIds that no longer exist
+    const validIds = new Set(this.allProducts.map(p => p.id));
+    this.selectedIds.forEach(id => {
+      if (!validIds.has(id)) this.selectedIds.delete(id);
+    });
+  }
+
+  toggleSelectAll(event: any) {
+    if (event.target.checked) {
+      this.filteredProducts.forEach(p => this.selectedIds.add(p.id));
+    } else {
+      this.selectedIds.clear();
+    }
+  }
+
+  toggleSelectOne(id: number, event: any) {
+    if (event.target.checked) {
+      this.selectedIds.add(id);
+    } else {
+      this.selectedIds.delete(id);
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredProducts.length > 0 && this.filteredProducts.every(p => this.selectedIds.has(p.id));
+  }
+
+  clearSelection() {
+    this.selectedIds.clear();
+  }
+
+  confirmBatchDelete() {
+    if (this.selectedIds.size > 0) {
+      this.showBatchDeleteModal = true;
+    }
+  }
+
+  cancelBatchDelete() {
+    this.showBatchDeleteModal = false;
+  }
+
+  executeBatchDelete() {
+    const count = this.selectedIds.size;
+    if (count > 0) {
+      this.selectedIds.forEach(id => {
+        this.catalogService.delete(id);
+      });
+      this.toast.success(`${count} producto(s) eliminados correctamente`);
+      this.selectedIds.clear();
+      this.showBatchDeleteModal = false;
+    }
   }
 
   confirmDelete(id: number) {

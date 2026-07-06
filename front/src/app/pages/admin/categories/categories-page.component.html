@@ -22,7 +22,7 @@
 
           <!-- Parent Category -->
           <div class="category-row parent-row">
-            <span class="material-symbols-rounded cat-icon">folder</span>
+            <span class="material-symbols-rounded cat-icon">folder_open</span>
             <div class="cat-info" *ngIf="editingId !== cat.id">
               <span class="cat-name parent-name">{{ cat.nombre }}</span>
               <span class="cat-sub-count" *ngIf="cat.subcategorias?.length">
@@ -109,13 +109,12 @@
         <div class="mode-selector">
           <button type="button" class="mode-btn" [class.active]="formMode === 'parent'" (click)="setFormMode('parent')">
             <div class="mode-icon-wrapper parent-bg">
-              <span class="material-symbols-rounded">folder</span>
+              <span class="material-symbols-rounded">folder_open</span>
             </div>
             <div class="mode-text">
-              <span class="mode-title">Categoría Principal</span>
-              <span class="mode-sub">Menú principal (Ej: Lencería, Pijamas)</span>
+              <span class="mode-title">Principal</span>
+              <span class="mode-sub">Menú general</span>
             </div>
-            <span class="material-symbols-rounded mode-check" *ngIf="formMode === 'parent'">check_circle</span>
           </button>
 
           <button type="button" class="mode-btn" [class.active]="formMode === 'sub'" (click)="setFormMode('sub')">
@@ -124,20 +123,19 @@
             </div>
             <div class="mode-text">
               <span class="mode-title">Subcategoría</span>
-              <span class="mode-sub">Clasificación interna (Ej: Encaje, Seda)</span>
+              <span class="mode-sub">Dentro de otra</span>
             </div>
-            <span class="material-symbols-rounded mode-check" *ngIf="formMode === 'sub'">check_circle</span>
           </button>
         </div>
 
         <!-- Info Card explaining difference -->
         <div class="info-card parent-info" *ngIf="formMode === 'parent'">
           <span class="material-symbols-rounded info-icon">info</span>
-          <p>Una <strong>categoría principal</strong> es una carpeta general de alto nivel en tu tienda (Ej: Ropa de Playa, Pijamas, Lencería).</p>
+          <p>Una <strong>categoría principal</strong> es una sección de primer nivel (Ej: Lencería, Pijamas).</p>
         </div>
         <div class="info-card sub-info" *ngIf="formMode === 'sub'">
           <span class="material-symbols-rounded info-icon">lightbulb</span>
-          <p>Una <strong>subcategoría</strong> se ubica dentro de una categoría principal para clasificar productos específicos (Ej: dentro de 'Lencería' crear 'Conjuntos de Encaje').</p>
+          <p>Una <strong>subcategoría</strong> clasifica productos dentro de una principal (Ej: Encaje, Seda).</p>
         </div>
 
         <!-- Field: Parent Category Selector (Only for Subcategory) -->
@@ -147,7 +145,7 @@
           </label>
           <select id="cat-parent" [(ngModel)]="newParentId" class="form-select" [class.select-error]="!newParentId">
             <option [ngValue]="null" disabled>— Selecciona la carpeta principal —</option>
-            <option *ngFor="let c of parentCategories" [ngValue]="c.id">📁 {{ c.nombre }}</option>
+            <option *ngFor="let c of parentCategories" [ngValue]="c.id">📂 {{ c.nombre }}</option>
           </select>
           <span class="field-hint" *ngIf="!newParentId && parentCategories.length > 0">
             Debes elegir la carpeta en la que se guardará esta subcategoría.

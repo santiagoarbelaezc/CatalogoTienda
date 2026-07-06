@@ -27,12 +27,35 @@
     <span class="results-count">{{ filteredProducts.length }} resultados</span>
   </div>
 
+  <!-- Batch Action Banner -->
+  <div class="batch-banner card animate-slide-down" *ngIf="selectedIds.size > 0">
+    <div class="batch-info">
+      <span class="material-symbols-rounded batch-icon">check_circle</span>
+      <span class="batch-count"><strong>{{ selectedIds.size }}</strong> producto{{ selectedIds.size > 1 ? 's' : '' }} seleccionado{{ selectedIds.size > 1 ? 's' : '' }}</span>
+    </div>
+    <div class="batch-actions">
+      <button type="button" class="btn-batch-clear" (click)="clearSelection()">
+        <span>Deseleccionar todos</span>
+      </button>
+      <button type="button" class="btn-batch-delete" (click)="confirmBatchDelete()">
+        <span class="material-symbols-rounded">delete_sweep</span>
+        <span>Eliminar seleccionados ({{ selectedIds.size }})</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Table -->
   <div class="table-card card">
     <div class="table-wrapper" *ngIf="filteredProducts.length > 0">
       <table class="data-table">
         <thead>
           <tr>
+            <th class="checkbox-col">
+              <label class="custom-checkbox">
+                <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll($event)">
+                <span class="checkmark"></span>
+              </label>
+            </th>
             <th>Producto</th>
             <th>Categoría</th>
             <th>Precio Base</th>
@@ -43,7 +66,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let product of filteredProducts">
+          <tr *ngFor="let product of filteredProducts" [class.selected-row]="selectedIds.has(product.id)">
+            <td class="checkbox-col">
+              <label class="custom-checkbox">
+                <input type="checkbox" [checked]="selectedIds.has(product.id)" (change)="toggleSelectOne(product.id, $event)">
+                <span class="checkmark"></span>
+              </label>
+            </td>
             <td>
               <div class="product-cell">
                 <div class="product-thumb">
@@ -120,8 +149,23 @@
     <h3>¿Eliminar producto?</h3>
     <p>Esta acción es irreversible. El producto será eliminado del catálogo.</p>
     <div class="modal-actions">
-      <button class="btn-secondary" (click)="cancelDelete()">Cancelar</button>
-      <button class="btn-danger" (click)="executeDelete()" id="confirm-delete-btn">Eliminar</button>
+      <button type="button" class="btn-secondary" (click)="cancelDelete()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="executeDelete()" id="confirm-delete-btn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Delete Confirm Modal -->
+<div class="modal-backdrop" *ngIf="showBatchDeleteModal">
+  <div class="modal-card animate-scale-in">
+    <div class="modal-icon">
+      <span class="material-symbols-rounded">delete_sweep</span>
+    </div>
+    <h3>¿Eliminar {{ selectedIds.size }} productos?</h3>
+    <p>Estás a punto de eliminar <strong>{{ selectedIds.size }}</strong> productos seleccionados del catálogo. Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" (click)="cancelBatchDelete()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="executeBatchDelete()">Eliminar todos ({{ selectedIds.size }})</button>
     </div>
   </div>
 </div>
