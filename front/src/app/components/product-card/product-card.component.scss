@@ -35,6 +35,26 @@
   overflow: hidden;
   background: #f1f3f5;
   border: 1px solid #e9ecef;
+
+  .no-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    color: #adb5bd;
+    gap: 0.5rem;
+
+    .icon-no-img {
+      font-size: 2.5rem;
+    }
+    .text-no-img {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
 }
 
 .image-tags {

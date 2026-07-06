@@ -153,6 +153,51 @@
         </div>
       </div>
 
+      <!-- Imágenes (Cloudinary) -->
+      <div class="form-section card">
+        <div class="section-header-row">
+          <h3 class="section-title">Imágenes del Producto</h3>
+          <span class="image-counter-badge" [class.max-reached]="(existingImages.length + selectedFiles.length) >= 3">
+            {{ existingImages.length + selectedFiles.length }} / 3 Máx.
+          </span>
+        </div>
+        <p class="section-subtitle">Sube hasta 3 imágenes de presentación para el catálogo.</p>
+
+        <!-- Gallery -->
+        <div class="image-gallery" *ngIf="existingImages.length > 0 || selectedFiles.length > 0">
+          <!-- Existing Images -->
+          <div class="image-thumb" *ngFor="let img of existingImages; let i = index">
+            <img [src]="img.url" alt="Imagen existente">
+            <span class="badge-saved">Guardada</span>
+            <button type="button" class="btn-remove-img" (click)="removeExistingImage(img, i)" title="Eliminar de Cloudinary">
+              <span class="material-symbols-rounded">delete</span>
+            </button>
+          </div>
+
+          <!-- Pending Selected Files -->
+          <div class="image-thumb pending" *ngFor="let sel of selectedFiles; let j = index">
+            <img [src]="sel.previewUrl" alt="Previsualización">
+            <span class="badge-pending">Lista para subir</span>
+            <button type="button" class="btn-remove-img" (click)="removeSelectedFile(j)" title="Descartar imagen">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dropzone / Selector -->
+        <div class="upload-dropzone" [class.disabled]="(existingImages.length + selectedFiles.length) >= 3"
+             (click)="fileInput.click()">
+          <input #fileInput type="file" accept="image/*" multiple [disabled]="(existingImages.length + selectedFiles.length) >= 3"
+                 (change)="onFilesSelected($event)" style="display: none;">
+          <span class="material-symbols-rounded dropzone-icon">cloud_upload</span>
+          <div class="dropzone-text">
+            <strong *ngIf="(existingImages.length + selectedFiles.length) < 3">Haz clic para agregar imágenes</strong>
+            <strong *ngIf="(existingImages.length + selectedFiles.length) >= 3" class="text-max">Límite de 3 imágenes alcanzado</strong>
+            <span *ngIf="(existingImages.length + selectedFiles.length) < 3">Formato PNG, JPG o WebP (máx. 5MB)</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Status -->
       <div class="form-section card">
         <h3 class="section-title">Estado</h3>

@@ -76,7 +76,8 @@
             <td>
               <div class="product-cell">
                 <div class="product-thumb">
-                  <img [src]="product.imagenes && product.imagenes.length > 0 ? product.imagenes[0].url : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'" [alt]="product.nombre" class="thumb-img">
+                  <img *ngIf="product.imagenes && product.imagenes.length > 0" [src]="product.imagenes[0].url" [alt]="product.nombre" class="thumb-img">
+                  <span *ngIf="!product.imagenes || product.imagenes.length === 0" class="material-symbols-rounded no-thumb-icon" title="Sin imagen">image_not_supported</span>
                 </div>
                 <div class="product-info">
                   <span class="product-name">{{ product.nombre }}</span>

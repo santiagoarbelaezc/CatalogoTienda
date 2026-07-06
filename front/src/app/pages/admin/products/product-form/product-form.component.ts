@@ -50,6 +50,10 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   colores = COLORES;
   tallas = TALLAS;
 
+  // Images
+  existingImages: any[] = [];
+  selectedFiles: { file: File; previewUrl: string }[] = [];
+
   isSaving = false;
   isGeneratingAI = false;
   private subs = new Subscription();
@@ -96,6 +100,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.selectedFiles.forEach(item => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    });
   }
 
   private loadProduct(p: Producto) {
@@ -108,6 +115,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     this.categoriaId = p.categoria.id;
     this.marcaId = p.marca.id;
     this.telaId = p.tela.id;
+    this.existingImages = p.imagenes || [];
     this.variantes = p.variantes.map(v => ({
       sku: v.sku,
       precio: v.precio,
@@ -137,6 +145,98 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     if (v.precio < 0 || isNaN(v.precio)) {
       v.precio = 0;
     }
+  }
+
+  onFilesSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const currentTotal = this.existingImages.length + this.selectedFiles.length;
+    const remainingSlots = 3 - currentTotal;
+
+    if (remainingSlots <= 0) {
+      this.toast.error('Ya has alcanzado el límite máximo de 3 imágenes.');
+      input.value = '';
+      return;
+    }
+
+    const filesToProcess = Array.from(input.files).slice(0, remainingSlots);
+    if (input.files.length > remainingSlots) {
+      this.toast.info(`Solo se agregaron ${remainingSlots} imagen(es) debido al límite máximo de 3.`);
+    }
+
+    filesToProcess.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        this.toast.error(`El archivo ${file.name} no es una imagen válida.`);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.toast.error(`La imagen ${file.name} supera el límite de 5MB.`);
+        return;
+      }
+      const previewUrl = URL.createObjectURL(file);
+      this.selectedFiles.push({ file, previewUrl });
+    });
+
+    input.value = '';
+  }
+
+  removeSelectedFile(index: number) {
+    const item = this.selectedFiles[index];
+    if (item?.previewUrl) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    this.selectedFiles.splice(index, 1);
+  }
+
+  removeExistingImage(image: any, index: number) {
+    if (!image.id || image.id === 0 || typeof image.id !== 'number') {
+      this.existingImages.splice(index, 1);
+      this.toast.info('Imagen removida de la lista');
+      return;
+    }
+    if (!confirm('¿Estás seguro de eliminar esta imagen de Cloudinary?')) return;
+    this.catalogService.deleteImage(image.id).subscribe({
+      next: () => {
+        this.existingImages.splice(index, 1);
+        this.toast.success('Imagen eliminada de Cloudinary');
+      },
+      error: (err) => {
+        console.error('Error eliminando imagen:', err);
+        this.toast.error('Error al eliminar imagen: ' + (err.error?.message || 'Error del servidor'));
+      }
+    });
+  }
+
+  private uploadPendingImages(productId: number, onSuccess: () => void) {
+    if (this.selectedFiles.length === 0) {
+      onSuccess();
+      return;
+    }
+
+    this.toast.info('Subiendo imágenes a Cloudinary... Por favor espera');
+    let completed = 0;
+    const total = this.selectedFiles.length;
+
+    this.selectedFiles.forEach((item, index) => {
+      const isPrincipal = (index === 0 && this.existingImages.length === 0);
+      this.catalogService.uploadImage(productId, item.file, isPrincipal).subscribe({
+        next: () => {
+          completed++;
+          if (completed === total) {
+            onSuccess();
+          }
+        },
+        error: (err) => {
+          console.error('Error subiendo imagen:', err);
+          completed++;
+          this.toast.error(`Error subiendo imagen ${index + 1}: ${err.error?.message || 'Error en Cloudinary'}`);
+          if (completed === total) {
+            onSuccess();
+          }
+        }
+      });
+    });
   }
 
   addVariant() {
@@ -185,7 +285,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       categoria,
       marca,
       tela,
-      imagenes: [{ id: 1, url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80', es_principal: true }],
+      imagenes: this.existingImages.length > 0 ? this.existingImages : [],
       variantes: variantesBuilt,
     };
 
@@ -194,14 +294,27 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       : this.catalogService.create(productData);
 
     obs$.subscribe({
-      next: () => {
-        this.isSaving = false;
-        if (this.isEditMode) {
-          this.toast.success('Producto actualizado correctamente');
+      next: (res: any) => {
+        const targetId = (this.isEditMode && this.editingId !== null) ? Number(this.editingId) : (res?.data?.id || res?.id);
+        if (targetId && this.selectedFiles.length > 0) {
+          this.uploadPendingImages(targetId, () => {
+            this.isSaving = false;
+            if (this.isEditMode) {
+              this.toast.success('Producto e imágenes actualizados correctamente');
+            } else {
+              this.toast.success('Producto creado y fotos subidas exitosamente');
+            }
+            this.router.navigate(['/admin/products']);
+          });
         } else {
-          this.toast.success('Producto creado exitosamente');
+          this.isSaving = false;
+          if (this.isEditMode) {
+            this.toast.success('Producto actualizado correctamente');
+          } else {
+            this.toast.success('Producto creado exitosamente');
+          }
+          this.router.navigate(['/admin/products']);
         }
-        this.router.navigate(['/admin/products']);
       },
       error: (err) => {
         this.isSaving = false;

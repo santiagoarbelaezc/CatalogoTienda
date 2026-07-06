@@ -10,9 +10,14 @@
         <span class="tag tag-season">{{ product.temporada }}</span>
       </div>
       <img
-        [src]="product.imagenes && product.imagenes[activeImageIndex] ? product.imagenes[activeImageIndex].url : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'"
+        *ngIf="product.imagenes && product.imagenes.length > 0 && product.imagenes[activeImageIndex]"
+        [src]="product.imagenes[activeImageIndex].url"
         [alt]="product.nombre"
         class="main-image group-hover:scale-105">
+      <div *ngIf="!product.imagenes || product.imagenes.length === 0" class="no-image-placeholder">
+        <span class="material-symbols-rounded icon-no-img">image_not_supported</span>
+        <span class="text-no-img">Sin imagen</span>
+      </div>
     </div>
     <!-- Thumbnails -->
     <div class="thumbnails" *ngIf="product.imagenes.length > 1">

@@ -14,10 +14,11 @@ export class CatalogService {
   }
 
   private normalizeProducts(products: any[]): Producto[] {
-    const defaultImg = 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80';
     return products.map(p => {
-      if (!p.imagenes || !Array.isArray(p.imagenes) || p.imagenes.length === 0) {
-        p.imagenes = [{ id: 0, url: defaultImg, es_principal: true }];
+      if (!p.imagenes || !Array.isArray(p.imagenes)) {
+        p.imagenes = [];
+      } else {
+        p.imagenes = p.imagenes.filter((img: any) => img && img.url && !img.url.includes('unsplash.com'));
       }
       return p as Producto;
     });

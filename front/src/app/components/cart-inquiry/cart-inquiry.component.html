@@ -38,7 +38,8 @@
     <!-- Item rows -->
     <div class="cart-item" *ngFor="let item of items; let idx = index">
       <div class="item-thumb">
-        <img [src]="item.product.imagenes && item.product.imagenes.length > 0 ? item.product.imagenes[0].url : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'" class="thumb-img" [alt]="item.product.nombre">
+        <img *ngIf="item.product.imagenes && item.product.imagenes.length > 0" [src]="item.product.imagenes[0].url" class="thumb-img" [alt]="item.product.nombre">
+        <span *ngIf="!item.product.imagenes || item.product.imagenes.length === 0" class="material-symbols-rounded empty-thumb-icon" title="Sin imagen">image_not_supported</span>
       </div>
       <div class="item-info">
         <h4 class="item-name">{{ item.product.nombre }}</h4>
