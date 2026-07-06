@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterLinkActive } from '@angular/router';
 import { AuthService, AdminUser } from '../../auth/auth.service';
+import { ToastContainerComponent } from '../../components/toast-container/toast-container.component';
 
 interface NavItem {
   label: string;
@@ -12,7 +13,7 @@ interface NavItem {
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
-  imports: [CommonModule, RouterModule, RouterLinkActive],
+  imports: [CommonModule, RouterModule, RouterLinkActive, ToastContainerComponent],
   templateUrl: './admin-shell.component.html',
   styleUrls: ['./admin-shell.component.scss']
 })
