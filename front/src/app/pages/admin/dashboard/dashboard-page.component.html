@@ -36,29 +36,29 @@
   </div>
 
   <!-- Urgent Actions / Catalog Health Section -->
-  <div class="urgent-actions card animate-scale-in" *ngIf="urgentActions.length > 0" style="margin-bottom: 2rem;">
-    <div class="actions-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e9ecef; padding-bottom: 1rem; margin-bottom: 1rem;">
-      <div class="header-title-area" style="display: flex; align-items: center; gap: 0.75rem;">
-        <span class="material-symbols-rounded alert-bell-icon" style="color: #ef4444; font-size: 1.75rem; background: #fee2e2; padding: 0.375rem; border-radius: 0.5rem;">notification_important</span>
+  <div class="urgent-actions card animate-scale-in" *ngIf="urgentActions.length > 0">
+    <div class="actions-header">
+      <div class="header-title-area">
+        <span class="material-symbols-rounded alert-bell-icon">notification_important</span>
         <div>
-          <h3 class="actions-title" style="margin: 0; font-size: 1rem; font-weight: 700; color: #111;">Salud del Catálogo y Acciones Urgentes</h3>
-          <p class="actions-subtitle" style="margin: 2px 0 0; font-size: 0.75rem; color: #6b7280;">Productos que requieren atención inmediata para optimizar la tienda</p>
+          <h3 class="actions-title">Salud del Catálogo y Acciones Urgentes</h3>
+          <p class="actions-subtitle">Productos que requieren atención inmediata para optimizar la tienda</p>
         </div>
       </div>
-      <span class="alerts-count-badge" style="background: #ef4444; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.625rem; border-radius: 999px;">{{ urgentActions.length }} alertas</span>
+      <span class="alerts-count-badge">{{ urgentActions.length }} alertas</span>
     </div>
-    <div class="actions-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
-      <div class="action-item" *ngFor="let act of urgentActions" style="display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border: 1px solid #e9ecef; padding: 0.875rem 1rem; border-radius: 0.75rem; transition: all 0.2s;">
-        <div class="action-left" style="display: flex; align-items: center; gap: 0.875rem;">
-          <span class="material-symbols-rounded action-type-icon" [style.color]="act.iconColor" style="font-size: 1.5rem;">{{ act.icon }}</span>
-          <div class="action-desc" style="display: flex; flex-direction: column; gap: 0.1rem;">
-            <span class="action-name" style="font-weight: 600; color: #111; font-size: 0.875rem;">{{ act.productName }}</span>
-            <span class="action-details" style="font-size: 0.75rem; color: #6b7280;">{{ act.reason }}</span>
+    <div class="actions-list">
+      <div class="action-item" *ngFor="let act of urgentActions">
+        <div class="action-left">
+          <span class="material-symbols-rounded action-type-icon" [style.color]="act.iconColor">{{ act.icon }}</span>
+          <div class="action-desc">
+            <span class="action-name">{{ act.productName }}</span>
+            <span class="action-details">{{ act.reason }}</span>
           </div>
         </div>
-        <a [routerLink]="['/admin/products', act.productId, 'edit']" class="btn-action-go" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem; font-weight: 700; color: #111; text-decoration: none; background: #fff; border: 1px solid #e9ecef; padding: 0.375rem 0.75rem; border-radius: 0.5rem; transition: all 0.15s; cursor: pointer;">
+        <a [routerLink]="['/admin/products', act.productId, 'edit']" class="btn-action-go">
           Corregir
-          <span class="material-symbols-rounded" style="font-size: 1rem;">chevron_right</span>
+          <span class="material-symbols-rounded">chevron_right</span>
         </a>
       </div>
     </div>
