@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CatalogService } from '../../../core/catalog.service';
 import { Producto } from '../../../models/catalog.models';
 import { Chart, registerables } from 'chart.js';
@@ -11,8 +12,8 @@ interface KpiCard {
   title: string;
   value: string;
   icon: string;
-  trend: number;
   trendLabel: string;
+  isPositive: boolean;
 }
 
 @Component({
@@ -23,75 +24,147 @@ interface KpiCard {
   styleUrls: ['./dashboard-page.component.scss']
 })
 export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('salesChart') chartCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('inventoryChart') chartCanvas!: ElementRef<HTMLCanvasElement>;
 
+  allProducts: Producto[] = [];
   topProducts: Producto[] = [];
   private chart: Chart | null = null;
+  private sub!: Subscription;
+
+  chartMode: 'category' | 'gender' = 'category';
 
   kpis: KpiCard[] = [
     {
-      title: 'Ventas del Mes',
-      value: '$ 4,850,000',
-      icon: 'paid',
-      trend: 14.2,
-      trendLabel: 'vs mes anterior'
+      title: 'Total Productos',
+      value: '0',
+      icon: 'inventory_2',
+      trendLabel: 'Cargando catálogo...',
+      isPositive: true
     },
     {
-      title: 'Pedidos Pendientes',
-      value: '8',
-      icon: 'shopping_bag',
-      trend: -5,
-      trendLabel: 'vs mes anterior'
+      title: 'Existencias (Stock)',
+      value: '0',
+      icon: 'stacked_bar_chart',
+      trendLabel: 'Calculando unidades...',
+      isPositive: true
     },
     {
-      title: 'Nuevos Usuarios',
-      value: '34',
-      icon: 'group_add',
-      trend: 22.5,
-      trendLabel: 'vs mes anterior'
+      title: 'Valorización Inventario',
+      value: '$ 0',
+      icon: 'payments',
+      trendLabel: 'Precio base promedio: $ 0',
+      isPositive: true
     },
     {
-      title: 'Ticket Promedio',
-      value: '$ 142,600',
-      icon: 'receipt_long',
-      trend: 4.8,
-      trendLabel: 'vs mes anterior'
+      title: 'Alerta Bajo Stock',
+      value: '0',
+      icon: 'warning',
+      trendLabel: 'Verificando existencias...',
+      isPositive: true
     }
   ];
 
   constructor(private catalogService: CatalogService) {}
 
   ngOnInit() {
-    this.topProducts = this.catalogService.getTopProducts(3);
+    this.sub = this.catalogService.products$.subscribe(list => {
+      this.allProducts = list || [];
+      this.topProducts = this.catalogService.getTopProducts(5);
+      this.updateKpis();
+      if (this.chart) {
+        this.updateChartData();
+      }
+    });
   }
 
   ngAfterViewInit() {
-    this.buildChart();
+    setTimeout(() => {
+      this.buildChart();
+    }, 100);
   }
 
   ngOnDestroy() {
+    this.sub?.unsubscribe();
     this.chart?.destroy();
   }
 
+  updateKpis() {
+    const totalProd = this.allProducts.length;
+    const activeProd = this.allProducts.filter(p => p.activo).length;
+    
+    let totalStock = 0;
+    let totalValue = 0;
+    let lowStockCount = 0;
+    let totalVariants = 0;
+
+    this.allProducts.forEach(p => {
+      (p.variantes || []).forEach(v => {
+        totalVariants++;
+        const st = v.stock || 0;
+        totalStock += st;
+        totalValue += st * (v.precio || p.precio_base || 0);
+        if (st < 10) lowStockCount++;
+      });
+    });
+
+    const avgPrice = totalProd > 0
+      ? this.allProducts.reduce((acc, p) => acc + (p.precio_base || 0), 0) / totalProd
+      : 0;
+
+    this.kpis = [
+      {
+        title: 'Total Productos',
+        value: `${totalProd}`,
+        icon: 'inventory_2',
+        trendLabel: `${activeProd} activos · ${totalProd - activeProd} inactivos`,
+        isPositive: true
+      },
+      {
+        title: 'Existencias (Stock)',
+        value: `${totalStock.toLocaleString('es-CO')}`,
+        icon: 'stacked_bar_chart',
+        trendLabel: `Distribuido en ${totalVariants} variantes`,
+        isPositive: true
+      },
+      {
+        title: 'Valorización Inventario',
+        value: this.formatPrice(totalValue),
+        icon: 'payments',
+        trendLabel: `Precio base prom: ${this.formatPrice(avgPrice)}`,
+        isPositive: true
+      },
+      {
+        title: 'Alerta Bajo Stock',
+        value: `${lowStockCount}`,
+        icon: 'warning',
+        trendLabel: lowStockCount > 0 ? `${lowStockCount} variantes con stock < 10 uds.` : 'Inventario 100% saludable',
+        isPositive: lowStockCount === 0
+      }
+    ];
+  }
+
+  setChartMode(mode: 'category' | 'gender') {
+    if (this.chartMode === mode) return;
+    this.chartMode = mode;
+    this.updateChartData();
+  }
+
   private buildChart() {
-    const labels = this.generateLast30DaysLabels();
-    const data = this.generateMockSalesData();
+    if (!this.chartCanvas) return;
+
+    const { labels, data } = this.getChartLabelsAndData();
 
     this.chart = new Chart(this.chartCanvas.nativeElement, {
-      type: 'line',
+      type: 'bar',
       data: {
         labels,
         datasets: [{
-          label: 'Ventas',
+          label: 'Unidades en Stock',
           data,
-          borderColor: '#111111',
-          backgroundColor: 'rgba(17,17,17,0.04)',
-          borderWidth: 2,
-          pointBackgroundColor: '#111111',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          fill: true,
-          tension: 0.4,
+          backgroundColor: '#111111',
+          hoverBackgroundColor: '#3f3f46',
+          borderRadius: 8,
+          barThickness: 36
         }]
       },
       options: {
@@ -102,11 +175,11 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
           tooltip: {
             backgroundColor: '#111',
             titleColor: '#fff',
-            bodyColor: 'rgba(255,255,255,0.7)',
-            padding: 10,
+            bodyColor: 'rgba(255,255,255,0.85)',
+            padding: 12,
             cornerRadius: 8,
             callbacks: {
-              label: ctx => ` $ ${(ctx.parsed.y ?? 0).toLocaleString('es-CO')}`
+              label: ctx => ` ${ctx.parsed.y ?? 0} unidades en almacén`
             }
           }
         },
@@ -115,9 +188,8 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
             grid: { display: false },
             border: { display: false },
             ticks: {
-              color: '#9ca3af',
-              font: { size: 11, family: 'Outfit' },
-              maxTicksLimit: 8,
+              color: '#4b5563',
+              font: { size: 12, family: 'Outfit', weight: 600 }
             }
           },
           y: {
@@ -126,7 +198,7 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
             ticks: {
               color: '#9ca3af',
               font: { size: 11, family: 'Outfit' },
-              callback: val => `${(+val / 1000).toFixed(0)}k`
+              callback: val => `${val} uds.`
             }
           }
         }
@@ -134,35 +206,47 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  private generateLast30DaysLabels(): string[] {
-    const days: string[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      days.push(d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }));
-    }
-    return days;
+  private updateChartData() {
+    if (!this.chart) return;
+    const { labels, data } = this.getChartLabelsAndData();
+    this.chart.data.labels = labels;
+    this.chart.data.datasets[0].data = data;
+    this.chart.update();
   }
 
-  private generateMockSalesData(): number[] {
-    const base = [420000, 580000, 510000, 640000, 590000, 780000, 860000, 720000,
-                  690000, 810000, 930000, 870000, 760000, 840000, 920000, 880000,
-                  790000, 850000, 960000, 830000, 710000, 650000, 740000, 820000,
-                  900000, 870000, 940000, 820000, 880000, 750000];
-    return base;
+  private getChartLabelsAndData(): { labels: string[], data: number[] } {
+    const map = new Map<string, number>();
+
+    if (this.chartMode === 'category') {
+      this.allProducts.forEach(p => {
+        const key = p.categoria?.nombre || 'General';
+        const st = (p.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
+        map.set(key, (map.get(key) || 0) + st);
+      });
+    } else {
+      this.allProducts.forEach(p => {
+        const key = p.genero || 'Unisex';
+        const st = (p.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
+        map.set(key, (map.get(key) || 0) + st);
+      });
+    }
+
+    if (map.size === 0) {
+      return { labels: ['Sin datos'], data: [0] };
+    }
+
+    const labels = Array.from(map.keys());
+    const data = Array.from(map.values());
+    return { labels, data };
   }
 
   getProductStock(product: Producto): number {
-    return product.variantes.reduce((s, v) => s + v.stock, 0);
+    return (product.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
   }
 
   formatPrice(val: number): string {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency', currency: 'COP', maximumFractionDigits: 0
     }).format(val);
-  }
-
-  get trendPositive(): boolean {
-    return true;
   }
 }

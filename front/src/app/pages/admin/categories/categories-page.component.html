@@ -124,19 +124,19 @@
 
   </div>
 
-  <!-- Delete Confirm Modal -->
-  <div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
-    <div class="modal-card animate-scale-in">
-      <div class="modal-icon">
-        <span class="material-symbols-rounded">delete_forever</span>
-      </div>
-      <h3>¿Eliminar categoría?</h3>
-      <p>Se eliminará junto con sus subcategorías.</p>
-      <div class="modal-actions">
-        <button class="btn-secondary" (click)="deleteConfirmId = null">Cancelar</button>
-        <button class="btn-danger" (click)="executeDelete()">Eliminar</button>
-      </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
+  <div class="modal-card animate-scale-in">
+    <div class="modal-icon">
+      <span class="material-symbols-rounded">delete_forever</span>
+    </div>
+    <h3>¿Eliminar categoría?</h3>
+    <p>Se eliminará junto con sus subcategorías.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="deleteConfirmId = null">Cancelar</button>
+      <button class="btn-danger" (click)="executeDelete()">Eliminar</button>
     </div>
   </div>
-
 </div>

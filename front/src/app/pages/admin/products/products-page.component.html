@@ -47,7 +47,7 @@
             <td>
               <div class="product-cell">
                 <div class="product-thumb">
-                  <img [src]="product.imagenes[0].url" [alt]="product.nombre" class="thumb-img">
+                  <img [src]="product.imagenes && product.imagenes.length > 0 ? product.imagenes[0].url : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'" [alt]="product.nombre" class="thumb-img">
                 </div>
                 <div class="product-info">
                   <span class="product-name">{{ product.nombre }}</span>
@@ -109,19 +109,19 @@
     </div>
   </div>
 
-  <!-- Delete Confirm Modal -->
-  <div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
-    <div class="modal-card animate-scale-in">
-      <div class="modal-icon">
-        <span class="material-symbols-rounded">delete_forever</span>
-      </div>
-      <h3>¿Eliminar producto?</h3>
-      <p>Esta acción es irreversible. El producto será eliminado del catálogo.</p>
-      <div class="modal-actions">
-        <button class="btn-secondary" (click)="cancelDelete()">Cancelar</button>
-        <button class="btn-danger" (click)="executeDelete()" id="confirm-delete-btn">Eliminar</button>
-      </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-backdrop" *ngIf="deleteConfirmId !== null">
+  <div class="modal-card animate-scale-in">
+    <div class="modal-icon">
+      <span class="material-symbols-rounded">delete_forever</span>
+    </div>
+    <h3>¿Eliminar producto?</h3>
+    <p>Esta acción es irreversible. El producto será eliminado del catálogo.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelDelete()">Cancelar</button>
+      <button class="btn-danger" (click)="executeDelete()" id="confirm-delete-btn">Eliminar</button>
     </div>
   </div>
-
 </div>

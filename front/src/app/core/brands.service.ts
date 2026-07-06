@@ -1,44 +1,57 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, share } from 'rxjs';
 import { Marca } from '../models/catalog.models';
-import { MARCAS } from '../data/mock-data';
-
-const STORAGE_KEY = 'cti_marcas';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class BrandsService {
-  private _brands$ = new BehaviorSubject<Marca[]>(this.load());
+  private _brands$ = new BehaviorSubject<Marca[]>([]);
   brands$ = this._brands$.asObservable();
 
-  private load(): Marca[] {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : MARCAS;
+  constructor(private http: HttpClient) {
+    this.loadFromServer();
   }
 
-  private save(list: Marca[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    this._brands$.next(list);
+  loadFromServer(): void {
+    this.http.get<any>(`${environment.apiUrl}/marcas`).subscribe({
+      next: (res) => {
+        if (res.success && Array.isArray(res.data)) {
+          this._brands$.next(res.data);
+        }
+      },
+      error: (err) => console.error('Error cargando marcas desde backend:', err)
+    });
   }
 
   getAll(): Marca[] {
     return this._brands$.value;
   }
 
-  createBrand(nombre: string): Marca {
-    const list = this.getAll();
-    const newId = list.length > 0 ? Math.max(...list.map(m => m.id)) + 1 : 1;
-    const marca: Marca = { id: newId, nombre: nombre.trim() };
-    this.save([...list, marca]);
-    return marca;
+  createBrand(nombre: string): Observable<any> {
+    const obs = this.http.post<any>(`${environment.apiUrl}/marcas`, { nombre: nombre.trim() }).pipe(
+      tap(() => this.loadFromServer()),
+      share()
+    );
+    obs.subscribe();
+    return obs;
   }
 
-  updateBrand(id: number, nombre: string): void {
-    const list = this.getAll().map(m => m.id === id ? { ...m, nombre: nombre.trim() } : m);
-    this.save(list);
+  updateBrand(id: number, nombre: string): Observable<any> {
+    const obs = this.http.put<any>(`${environment.apiUrl}/marcas/${id}`, { nombre: nombre.trim() }).pipe(
+      tap(() => this.loadFromServer()),
+      share()
+    );
+    obs.subscribe();
+    return obs;
   }
 
-  deleteBrand(id: number): void {
-    const list = this.getAll().filter(m => m.id !== id);
-    this.save(list);
+  deleteBrand(id: number): Observable<any> {
+    const obs = this.http.delete<any>(`${environment.apiUrl}/marcas/${id}`).pipe(
+      tap(() => this.loadFromServer()),
+      share()
+    );
+    obs.subscribe();
+    return obs;
   }
 }

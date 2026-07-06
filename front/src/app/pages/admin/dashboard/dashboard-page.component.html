@@ -3,18 +3,18 @@
   <!-- Page Header -->
   <div class="page-header">
     <div>
-      <h1 class="page-title">Resumen General</h1>
-      <p class="page-subtitle">Aquí tienes un vistazo de cómo va el rendimiento de <strong>Catálogo Tienda Íntima</strong> hoy.</p>
+      <h1 class="page-title">Estadísticas y Analíticas de Productos</h1>
+      <p class="page-subtitle">Monitoreo en tiempo real del inventario, valoración, existencias y stock de <strong>Catálogo Tienda Íntima</strong>.</p>
     </div>
     <div class="header-actions">
       <a routerLink="/admin/products/new" class="btn-primary" id="new-product-btn">
         <span class="material-symbols-rounded">add</span>
         Nuevo Producto
       </a>
-      <button class="btn-secondary" id="reports-btn">
-        <span class="material-symbols-rounded">bar_chart</span>
-        Ver Reportes
-      </button>
+      <a routerLink="/admin/analytics" class="btn-secondary" id="reports-btn" style="text-decoration: none;">
+        <span class="material-symbols-rounded">analytics</span>
+        Analítica Avanzada
+      </a>
     </div>
   </div>
 
@@ -26,11 +26,10 @@
         <span class="stat-icon material-symbols-rounded">{{ kpi.icon }}</span>
       </div>
       <div class="stat-value">{{ kpi.value }}</div>
-      <div class="stat-trend" [class.positive]="kpi.trend > 0" [class.negative]="kpi.trend < 0">
+      <div class="stat-trend" [class.positive]="kpi.isPositive" [class.negative]="!kpi.isPositive">
         <span class="material-symbols-rounded trend-arrow">
-          {{ kpi.trend > 0 ? 'trending_up' : 'trending_down' }}
+          {{ kpi.isPositive ? 'check_circle' : 'warning' }}
         </span>
-        <span>{{ kpi.trend > 0 ? '+' : '' }}{{ kpi.trend }}%</span>
         <span class="trend-label">{{ kpi.trendLabel }}</span>
       </div>
     </div>
@@ -39,30 +38,50 @@
   <!-- Charts Row -->
   <div class="charts-row">
 
-    <!-- Sales Evolution Chart -->
+    <!-- Inventory Distribution Chart -->
     <div class="chart-card card">
       <div class="chart-card-header">
         <div>
-          <h3 class="chart-title">Evolución de Ventas</h3>
-          <p class="chart-subtitle">Ingresos diarios en los últimos 30 días</p>
+          <h3 class="chart-title">Distribución de Existencias en Almacén</h3>
+          <p class="chart-subtitle">Unidades físicas disponibles en inventario según clasificación</p>
         </div>
-        <span class="trend-badge">
-          <span class="material-symbols-rounded">trending_up</span>
-          Tendencia positiva
-        </span>
+        <div class="chart-toggles" style="display: flex; gap: 6px; background: #f1f3f5; padding: 4px; border-radius: 8px;">
+          <button
+            type="button"
+            (click)="setChartMode('category')"
+            [style.background]="chartMode === 'category' ? '#111' : 'transparent'"
+            [style.color]="chartMode === 'category' ? '#fff' : '#6b7280'"
+            style="border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            Por Categoría
+          </button>
+          <button
+            type="button"
+            (click)="setChartMode('gender')"
+            [style.background]="chartMode === 'gender' ? '#111' : 'transparent'"
+            [style.color]="chartMode === 'gender' ? '#fff' : '#6b7280'"
+            style="border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            Por Género
+          </button>
+        </div>
       </div>
       <div class="chart-wrapper">
-        <canvas #salesChart></canvas>
+        <canvas #inventoryChart></canvas>
       </div>
     </div>
 
     <!-- Top Products -->
     <div class="top-products card">
       <div class="top-products-header">
-        <h3 class="chart-title">Top Productos</h3>
+        <div>
+          <h3 class="chart-title">Top 5 Existencias</h3>
+          <p class="chart-subtitle" style="margin: 2px 0 0; font-size: 0.72rem;">Productos con mayor inventario</p>
+        </div>
         <a routerLink="/admin/products" class="link-all">Ver todos</a>
       </div>
       <div class="product-list">
+        <div *ngIf="topProducts.length === 0" style="padding: 24px; text-align: center; color: #9ca3af; font-size: 0.85rem;">
+          No hay productos disponibles
+        </div>
         <div class="product-row" *ngFor="let p of topProducts; let i = index">
           <div class="product-rank">
             <span class="rank-badge" [class.gold]="i===0" [class.silver]="i===1" [class.bronze]="i===2">
@@ -71,11 +90,11 @@
           </div>
           <div class="product-info">
             <span class="product-name">{{ p.nombre }}</span>
-            <span class="product-meta">{{ p.categoria.nombre }} · Stock {{ getProductStock(p) }}</span>
+            <span class="product-meta">{{ p.categoria.nombre }} · {{ p.genero }}</span>
           </div>
           <div class="product-stats">
-            <span class="product-sales">{{ getProductStock(p) }} uds.</span>
-            <span class="product-price">{{ formatPrice(p.precio_base) }}</span>
+            <span class="product-sales" style="color: #111; font-weight: 700;">{{ getProductStock(p) }} uds.</span>
+            <span class="product-price" style="color: #6b7280; font-weight: 500;">{{ formatPrice(p.precio_base) }}</span>
           </div>
         </div>
       </div>

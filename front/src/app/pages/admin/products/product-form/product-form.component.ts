@@ -132,14 +132,21 @@ export class ProductFormComponent implements OnInit {
       variantes: variantesBuilt,
     };
 
-    setTimeout(() => {
-      if (this.isEditMode && this.editingId !== null) {
-        this.catalogService.update(this.editingId, productData);
-      } else {
-        this.catalogService.create(productData);
+    const obs$ = (this.isEditMode && this.editingId !== null)
+      ? this.catalogService.update(this.editingId, productData)
+      : this.catalogService.create(productData);
+
+    obs$.subscribe({
+      next: () => {
+        this.isSaving = false;
+        this.router.navigate(['/admin/products']);
+      },
+      error: (err) => {
+        this.isSaving = false;
+        console.error('Error al guardar el producto:', err);
+        alert('Hubo un error al guardar el producto: ' + (err.error?.message || 'Error de servidor'));
       }
-      this.router.navigate(['/admin/products']);
-    }, 500);
+    });
   }
 
   cancel() {

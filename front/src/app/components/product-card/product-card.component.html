@@ -10,7 +10,7 @@
         <span class="tag tag-season">{{ product.temporada }}</span>
       </div>
       <img
-        [src]="product.imagenes[activeImageIndex].url"
+        [src]="product.imagenes && product.imagenes[activeImageIndex] ? product.imagenes[activeImageIndex].url : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'"
         [alt]="product.nombre"
         class="main-image group-hover:scale-105">
     </div>
