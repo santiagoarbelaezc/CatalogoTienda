@@ -1,0 +1,179 @@
+:host {
+  display: block;
+  background: #fff;
+  min-height: 100vh;
+}
+
+.print-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+.print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .brand-icon {
+    width: 48px;
+    height: 48px;
+    background: #000;
+    color: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.5rem;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .brand-text h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .brand-text span {
+    font-size: 0.875rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .meta-info {
+    text-align: right;
+    font-size: 0.875rem;
+    color: #555;
+    
+    p {
+      margin: 0.25rem 0;
+    }
+  }
+}
+
+.print-products {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.product-item {
+  display: flex;
+  gap: 1rem;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  border-radius: 8px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.product-image {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fa;
+  border: 1px solid #eee;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .no-img {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #999;
+  }
+}
+
+.product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  .cats {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .name {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .desc {
+    font-size: 0.8rem;
+    color: #444;
+    margin: 0 0 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .sku {
+    font-size: 0.75rem;
+    color: #666;
+    margin: 0 0 auto;
+  }
+
+  .price {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-top: 0.5rem;
+  }
+}
+
+.print-footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666;
+  page-break-inside: avoid;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-container {
+    padding: 0;
+    max-width: none;
+  }
+}

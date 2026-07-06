@@ -1,0 +1,44 @@
+<div class="print-container">
+  
+  <!-- Header -->
+  <header class="print-header">
+    <div class="brand">
+      <div class="brand-icon">CT</div>
+      <div class="brand-text">
+        <h1>Catálogo de Productos</h1>
+        <span>Tienda Íntima</span>
+      </div>
+    </div>
+    <div class="meta-info">
+      <p>Generado el: {{ today | date:'mediumDate' }}</p>
+      <p>Total Productos: {{ products.length }}</p>
+    </div>
+  </header>
+
+  <!-- Products Grid -->
+  <div class="print-products">
+    <div class="product-item" *ngFor="let product of products">
+      <div class="product-image">
+        <img *ngIf="product.imagenes?.length" [src]="product.imagenes[0].url" [alt]="product.nombre">
+        <div *ngIf="!product.imagenes?.length" class="no-img">Sin imagen</div>
+      </div>
+      <div class="product-info">
+        <div class="cats">
+          <span>{{ product.categoria.nombre }}</span> / <span>{{ product.marca.nombre }}</span>
+        </div>
+        <h2 class="name">{{ product.nombre }}</h2>
+        <div class="details">
+          <p class="desc">{{ product.descripcion }}</p>
+          <p class="sku">SKU base: {{ product.variantes[0] ? product.variantes[0].sku : 'N/A' }}</p>
+          <div class="price">{{ formatPrice(product.precio_base) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="print-footer">
+    <p>Catálogo Tienda Íntima &copy; {{ today | date:'yyyy' }}. Todos los derechos reservados.</p>
+  </footer>
+
+</div>

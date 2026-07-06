@@ -13,6 +13,7 @@ import { Producto, Variante, Color, Talla } from '../../models/catalog.models';
 })
 export class ProductCardComponent implements OnInit {
   @Input() product!: Producto;
+  @Input() reverseLayout: boolean = false;
   @Output() addToInquiry = new EventEmitter<{ product: Producto; variant: Variante; quantity: number }>();
 
   selectedColor: Color | null = null;

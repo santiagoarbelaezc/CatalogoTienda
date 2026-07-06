@@ -137,14 +137,31 @@
       <!-- Product List -->
       <div class="product-list" *ngIf="filteredProducts.length > 0">
         <app-product-card
-          *ngFor="let prod of filteredProducts"
+          *ngFor="let prod of paginatedProducts; let i = index"
           [product]="prod"
+          [reverseLayout]="i % 2 === 1"
           (addToInquiry)="handleAddToInquiry($event)">
         </app-product-card>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination-controls" *ngIf="totalPages > 1">
+        <button class="btn-page" (click)="prevPage()" [disabled]="currentPage === 1">
+          <span class="material-symbols-rounded">chevron_left</span>
+        </button>
+        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages">
+          <span class="material-symbols-rounded">chevron_right</span>
+        </button>
       </div>
     </div>
 
   </section>
+
+  <!-- Print FAB -->
+  <a routerLink="/catalog-print" class="print-fab" aria-label="Imprimir Catálogo" title="Imprimir Catálogo PDF">
+    <span class="material-symbols-rounded">print</span>
+  </a>
 </main>
 
 <!-- Floating Inquiry Cart -->

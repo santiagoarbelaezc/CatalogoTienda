@@ -549,6 +549,83 @@
   .sep { color: #dee2e6; }
 }
 
+/* ─── Pagination ────────────────────────────────────────── */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #dee2e6;
+
+  .page-info {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+  }
+
+  .btn-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    color: #111;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background: #f1f3f5;
+      border-color: #ced4da;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #f8f9fa;
+    }
+
+    .material-symbols-rounded {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+/* ─── Print FAB ─────────────────────────────────────────── */
+.print-fab {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1) translateY(-5px);
+    background: #333;
+  }
+
+  .material-symbols-rounded {
+    font-size: 1.5rem;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
 .catalog-footer p {
   font-size: 0.75rem;
   color: #9ca3af;

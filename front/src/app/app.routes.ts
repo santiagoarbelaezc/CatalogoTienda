@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/catalog/catalog-page.component').then(m => m.CatalogPageComponent)
   },
+  {
+    path: 'catalog-print',
+    loadComponent: () =>
+      import('./pages/catalog-print/catalog-print.component').then(m => m.CatalogPrintComponent)
+  },
 
   // ─── Admin Login ───────────────────────────────────────
   {

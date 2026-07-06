@@ -147,6 +147,45 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.filteredProducts = result;
+    this.currentPage = 1; // Reset to first page on filter change
+  }
+
+  // ─── Pagination Logic ────────────────────────────────────
+  currentPage = 1;
+  itemsPerPage = 16;
+
+  get paginatedProducts(): Producto[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredProducts.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredProducts.length / this.itemsPerPage) || 1;
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.scrollToTop();
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.scrollToTop();
+    }
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.scrollToTop();
+    }
+  }
+
+  private scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   handleAddToInquiry(event: { product: Producto; variant: Variante; quantity: number }) {
