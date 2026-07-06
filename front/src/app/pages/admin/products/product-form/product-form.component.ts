@@ -11,6 +11,7 @@ import { Producto, Categoria, Variante, Color, Talla, Marca } from '../../../../
 import { TELAS, COLORES, TALLAS } from '../../../../data/mock-data';
 
 interface VarianteForm {
+  id?: number;
   sku: string;
   precio: number;
   stock: number;
@@ -266,8 +267,8 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     const marca = this.marcas.find(m => m.id === Number(this.marcaId)) || this.marcas[0];
     const tela = this.telas.find(t => t.id === Number(this.telaId)) || this.telas[0];
 
-    const variantesBuilt: Variante[] = this.variantes.map((v, idx) => ({
-      id: idx + 1,
+    const variantesBuilt: any[] = this.variantes.map((v, idx) => ({
+      id: v.id || null,
       sku: v.sku || `SKU-${idx + 1}`,
       precio: v.precio || this.precioBase,
       stock: v.stock,

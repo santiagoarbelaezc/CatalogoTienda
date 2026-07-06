@@ -28,6 +28,13 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
 
   allProducts: Producto[] = [];
   topProducts: Producto[] = [];
+  urgentActions: Array<{
+    productId: number;
+    productName: string;
+    reason: string;
+    icon: string;
+    iconColor: string;
+  }> = [];
   private chart: Chart | null = null;
   private sub!: Subscription;
 
@@ -67,6 +74,7 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
   constructor(private catalogService: CatalogService) {}
 
   ngOnInit() {
+    this.catalogService.loadFromServer();
     this.sub = this.catalogService.products$.subscribe(list => {
       this.allProducts = list || [];
       this.topProducts = this.catalogService.getTopProducts(5);
@@ -97,7 +105,39 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
     let lowStockCount = 0;
     let totalVariants = 0;
 
+    this.urgentActions = [];
     this.allProducts.forEach(p => {
+      const stock = (p.variantes || []).reduce((acc, v) => acc + (v.stock || 0), 0);
+      if (stock === 0) {
+        this.urgentActions.push({
+          productId: p.id,
+          productName: p.nombre,
+          reason: 'Este producto no tiene existencias (Stock = 0).',
+          icon: 'hourglass_empty',
+          iconColor: '#ef4444'
+        });
+      }
+
+      if (!p.descripcion || p.descripcion.trim() === '') {
+        this.urgentActions.push({
+          productId: p.id,
+          productName: p.nombre,
+          reason: 'Falta descripción del producto. ¡Puedes autocompletarla con IA!',
+          icon: 'description',
+          iconColor: '#f59e0b'
+        });
+      }
+
+      if (!p.imagenes || p.imagenes.length === 0) {
+        this.urgentActions.push({
+          productId: p.id,
+          productName: p.nombre,
+          reason: 'El producto no tiene fotos. Sube al menos una imagen.',
+          icon: 'no_photography',
+          iconColor: '#3b82f6'
+        });
+      }
+
       (p.variantes || []).forEach(v => {
         totalVariants++;
         const st = v.stock || 0;

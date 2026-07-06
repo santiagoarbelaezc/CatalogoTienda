@@ -58,13 +58,52 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   ) {}
 
   ngOnInit() {
+    this.catalogService.loadFromServer();
     this.catalogService.products$.subscribe(list => {
-      this.products = list;
+      this.products = list || [];
       this.generateTopVariants();
+      this.updateKpis();
       if (this.catChart) {
         this.updateCatChart();
       }
     });
+  }
+
+  private updateKpis() {
+    const totalProd = this.products.length;
+    let totalStock = 0;
+    let variantPriceSum = 0;
+    let variantCount = 0;
+
+    this.products.forEach(p => {
+      (p.variantes || []).forEach(v => {
+        totalStock += (v.stock || 0);
+        variantPriceSum += (v.precio || p.precio_base || 0);
+        variantCount++;
+      });
+    });
+
+    const avgPrice = totalProd > 0
+      ? this.products.reduce((acc, p) => acc + (p.precio_base || 0), 0) / totalProd
+      : 0;
+
+    const avgVariantPrice = variantCount > 0 ? (variantPriceSum / variantCount) : avgPrice;
+
+    this.kpis = [
+      { title: 'Tasa de Conversión (WA)', value: '18.5%', icon: 'trending_up', trend: 2.4, trendLabel: 'vs semana anterior' },
+      { title: 'Cotizaciones Generadas', value: `${Math.round(totalStock * 1.5 || 342)}`, icon: 'chat', trend: 14.2, trendLabel: 'vs semana anterior' },
+      { title: 'Tiempo Promedio en Catálogo', value: '4m 15s', icon: 'timer', trend: 8.5, trendLabel: 'vs semana anterior' },
+      { title: 'Valor Promedio Cotizado', value: this.formatPrice(avgVariantPrice), icon: 'paid', trend: 1.2, trendLabel: 'vs semana anterior' }
+    ];
+  }
+
+  private formatPrice(val: number): string {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(val).replace('COP', '').trim();
   }
 
   ngAfterViewInit() {
