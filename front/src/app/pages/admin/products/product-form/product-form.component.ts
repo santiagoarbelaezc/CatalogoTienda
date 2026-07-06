@@ -119,12 +119,12 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
   get formattedPrecioCOP(): string {
     const val = Number(this.precioBase) || 0;
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
+    const formatted = new Intl.NumberFormat('es-CO', {
+      style: 'decimal',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(val);
+    return `$ ${formatted} COP`;
   }
 
   validatePrice() {
