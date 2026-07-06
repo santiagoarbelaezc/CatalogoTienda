@@ -34,6 +34,9 @@
             </div>
             <div class="cat-actions">
               <ng-container *ngIf="editingId !== cat.id">
+                <button class="btn-sub-add" (click)="quickAddSub(cat)" title="Añadir subcategoría aquí">
+                  <span class="material-symbols-rounded">add</span> Sub
+                </button>
                 <button class="btn-icon" (click)="startEdit(cat)" title="Editar">
                   <span class="material-symbols-rounded">edit</span>
                 </button>
@@ -96,28 +99,80 @@
 
     <!-- Right: Create Form -->
     <div class="form-sidebar">
-      <div class="form-section card">
-        <h3 class="section-title">Nueva Categoría</h3>
+      <div class="form-section card animate-fade-in">
+        <div class="form-header-box">
+          <h3 class="section-title">Añadir al Catálogo</h3>
+          <p class="section-desc">Selecciona el tipo de organización que deseas crear</p>
+        </div>
 
+        <!-- Interactive Mode Selector -->
+        <div class="mode-selector">
+          <button type="button" class="mode-btn" [class.active]="formMode === 'parent'" (click)="setFormMode('parent')">
+            <div class="mode-icon-wrapper parent-bg">
+              <span class="material-symbols-rounded">folder</span>
+            </div>
+            <div class="mode-text">
+              <span class="mode-title">Categoría Principal</span>
+              <span class="mode-sub">Menú principal (Ej: Lencería, Pijamas)</span>
+            </div>
+            <span class="material-symbols-rounded mode-check" *ngIf="formMode === 'parent'">check_circle</span>
+          </button>
+
+          <button type="button" class="mode-btn" [class.active]="formMode === 'sub'" (click)="setFormMode('sub')">
+            <div class="mode-icon-wrapper sub-bg">
+              <span class="material-symbols-rounded">label</span>
+            </div>
+            <div class="mode-text">
+              <span class="mode-title">Subcategoría</span>
+              <span class="mode-sub">Clasificación interna (Ej: Encaje, Seda)</span>
+            </div>
+            <span class="material-symbols-rounded mode-check" *ngIf="formMode === 'sub'">check_circle</span>
+          </button>
+        </div>
+
+        <!-- Info Card explaining difference -->
+        <div class="info-card parent-info" *ngIf="formMode === 'parent'">
+          <span class="material-symbols-rounded info-icon">info</span>
+          <p>Una <strong>categoría principal</strong> es una carpeta general de alto nivel en tu tienda (Ej: Ropa de Playa, Pijamas, Lencería).</p>
+        </div>
+        <div class="info-card sub-info" *ngIf="formMode === 'sub'">
+          <span class="material-symbols-rounded info-icon">lightbulb</span>
+          <p>Una <strong>subcategoría</strong> se ubica dentro de una categoría principal para clasificar productos específicos (Ej: dentro de 'Lencería' crear 'Conjuntos de Encaje').</p>
+        </div>
+
+        <!-- Field: Parent Category Selector (Only for Subcategory) -->
+        <div class="field animate-slide-down" *ngIf="formMode === 'sub'">
+          <label class="form-label" for="cat-parent">
+            ¿Dentro de qué categoría principal irá? <span class="required">*</span>
+          </label>
+          <select id="cat-parent" [(ngModel)]="newParentId" class="form-select" [class.select-error]="!newParentId">
+            <option [ngValue]="null" disabled>— Selecciona la carpeta principal —</option>
+            <option *ngFor="let c of parentCategories" [ngValue]="c.id">📁 {{ c.nombre }}</option>
+          </select>
+          <span class="field-hint" *ngIf="!newParentId && parentCategories.length > 0">
+            Debes elegir la carpeta en la que se guardará esta subcategoría.
+          </span>
+          <div class="alert-empty-parent" *ngIf="parentCategories.length === 0">
+            <span class="material-symbols-rounded">warning</span>
+            <span>No hay categorías principales. Crea una primero arriba.</span>
+          </div>
+        </div>
+
+        <!-- Field: Name -->
         <div class="field">
-          <label class="form-label" for="cat-nombre">Nombre *</label>
+          <label class="form-label" for="cat-nombre">
+            Nombre de la {{ formMode === 'parent' ? 'Categoría Principal' : 'Subcategoría' }} <span class="required">*</span>
+          </label>
           <input id="cat-nombre" type="text" [(ngModel)]="newName"
-                 class="form-input" placeholder="Ej: Lencería"
+                 class="form-input" [placeholder]="formMode === 'parent' ? 'Ej: Ropa Deportiva, Lencería...' : 'Ej: Tops deportivos, Leggings...'"
                  (keyup.enter)="createCategory()">
         </div>
 
-        <div class="field">
-          <label class="form-label" for="cat-parent">Categoría padre (opcional)</label>
-          <select id="cat-parent" [(ngModel)]="newParentId" class="form-select">
-            <option [ngValue]="null">— Categoría principal —</option>
-            <option *ngFor="let c of parentCategories" [ngValue]="c.id">{{ c.nombre }}</option>
-          </select>
-        </div>
-
-        <button type="button" class="btn-primary" (click)="createCategory()"
-                [disabled]="!newName.trim()" id="create-category-btn">
-          <span class="material-symbols-rounded">add</span>
-          Crear Categoría
+        <!-- Submit Button -->
+        <button type="button" class="btn-primary btn-submit-cat" (click)="createCategory()"
+                [disabled]="!newName.trim() || (formMode === 'sub' && !newParentId)" id="create-category-btn">
+          <span class="material-symbols-rounded">{{ formMode === 'parent' ? 'create_new_folder' : 'new_label' }}</span>
+          <span>Crear {{ formMode === 'parent' ? 'Categoría Principal' : 'Subcategoría' }}</span>
         </button>
       </div>
     </div>
