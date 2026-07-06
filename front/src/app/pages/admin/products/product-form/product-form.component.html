@@ -45,7 +45,11 @@
           <div class="field">
             <label class="form-label" for="prod-precio">Precio Base (COP) *</label>
             <input id="prod-precio" type="number" [(ngModel)]="precioBase" name="precioBase" required
-                   class="form-input" placeholder="89000" min="0">
+                   class="form-input" placeholder="89000" min="0" step="500" (ngModelChange)="validatePrice()">
+            <div class="price-cop-hint">
+              <span class="material-symbols-rounded">payments</span>
+              <span>Valor en moneda colombiana: <strong>{{ formattedPrecioCOP }}</strong></span>
+            </div>
           </div>
 
           <div class="field">
@@ -100,7 +104,7 @@
               <div class="field">
                 <label class="form-label">Precio (COP)</label>
                 <input type="number" [(ngModel)]="v.precio" [name]="'precio-' + i"
-                       class="form-input" [placeholder]="precioBase || 0" min="0">
+                       class="form-input" [placeholder]="precioBase || 0" min="0" (ngModelChange)="validateVariantPrice(v)">
               </div>
               <div class="field">
                 <label class="form-label">Stock</label>

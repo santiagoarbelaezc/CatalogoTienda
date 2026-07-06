@@ -117,6 +117,28 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     }));
   }
 
+  get formattedPrecioCOP(): string {
+    const val = Number(this.precioBase) || 0;
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(val);
+  }
+
+  validatePrice() {
+    if (this.precioBase < 0 || isNaN(this.precioBase)) {
+      this.precioBase = 0;
+    }
+  }
+
+  validateVariantPrice(v: VarianteForm) {
+    if (v.precio < 0 || isNaN(v.precio)) {
+      v.precio = 0;
+    }
+  }
+
   addVariant() {
     this.variantes.push({ sku: '', precio: this.precioBase, stock: 0, colorId: 1, tallaId: 1 });
   }
@@ -129,6 +151,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
   save() {
     if (!this.nombre.trim() || this.categoriaId === null) return;
+    if (this.precioBase < 0) {
+      this.toast.error('El precio base no puede ser negativo.');
+      return;
+    }
+    if (this.variantes.some(v => (v.precio || 0) < 0)) {
+      this.toast.error('El precio de una variante no puede ser negativo.');
+      return;
+    }
 
     this.isSaving = true;
 
