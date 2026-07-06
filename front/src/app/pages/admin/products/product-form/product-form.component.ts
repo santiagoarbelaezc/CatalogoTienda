@@ -5,6 +5,7 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { CatalogService } from '../../../../core/catalog.service';
 import { CategoriesService } from '../../../../core/categories.service';
 import { BrandsService } from '../../../../core/brands.service';
+import { ToastService } from '../../../../core/toast.service';
 import { Producto, Categoria, Variante, Color, Talla, Marca } from '../../../../models/catalog.models';
 import { TELAS, COLORES, TALLAS } from '../../../../data/mock-data';
 
@@ -54,6 +55,7 @@ export class ProductFormComponent implements OnInit {
     private catalogService: CatalogService,
     private categoriesService: CategoriesService,
     private brandsService: BrandsService,
+    private toast: ToastService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -139,12 +141,17 @@ export class ProductFormComponent implements OnInit {
     obs$.subscribe({
       next: () => {
         this.isSaving = false;
+        if (this.isEditMode) {
+          this.toast.success('Producto actualizado correctamente');
+        } else {
+          this.toast.success('Producto creado exitosamente');
+        }
         this.router.navigate(['/admin/products']);
       },
       error: (err) => {
         this.isSaving = false;
         console.error('Error al guardar el producto:', err);
-        alert('Hubo un error al guardar el producto: ' + (err.error?.message || 'Error de servidor'));
+        this.toast.error('Hubo un error al guardar el producto: ' + (err.error?.message || 'Error de servidor'));
       }
     });
   }

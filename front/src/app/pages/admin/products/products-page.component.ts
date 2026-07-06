@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CatalogService } from '../../../core/catalog.service';
+import { ToastService } from '../../../core/toast.service';
 import { Producto } from '../../../models/catalog.models';
 
 @Component({
@@ -21,7 +22,7 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
 
   private sub!: Subscription;
 
-  constructor(private catalogService: CatalogService) {}
+  constructor(private catalogService: CatalogService, private toast: ToastService) {}
 
   ngOnInit() {
     this.sub = this.catalogService.products$.subscribe(products => {
@@ -39,6 +40,7 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
     this.filteredProducts = q
       ? this.allProducts.filter(p =>
           p.nombre.toLowerCase().includes(q) ||
+          p.marca.nombre.toLowerCase().includes(q) ||
           p.categoria.nombre.toLowerCase().includes(q)
         )
       : [...this.allProducts];
@@ -55,12 +57,15 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
   executeDelete() {
     if (this.deleteConfirmId !== null) {
       this.catalogService.delete(this.deleteConfirmId);
+      this.toast.success('Producto eliminado del catálogo');
       this.deleteConfirmId = null;
     }
   }
 
   toggleActive(product: Producto) {
-    this.catalogService.update(product.id, { activo: !product.activo });
+    const nuevoEstado = !product.activo;
+    this.catalogService.update(product.id, { activo: nuevoEstado });
+    this.toast.success(`Producto ${nuevoEstado ? 'activado' : 'desactivado'} correctamente`);
   }
 
   getTotalStock(product: Producto): number {
