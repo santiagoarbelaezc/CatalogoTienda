@@ -50,7 +50,9 @@
     <div class="actions-list">
       <div class="action-item" *ngFor="let act of urgentActions">
         <div class="action-left">
-          <span class="material-symbols-rounded action-type-icon" [style.color]="act.iconColor">{{ act.icon }}</span>
+          <div class="action-icon-wrap" [class.red]="act.iconColor === '#ef4444'" [class.amber]="act.iconColor === '#f59e0b'" [class.blue]="act.iconColor === '#3b82f6'">
+            <span class="material-symbols-rounded">{{ act.icon }}</span>
+          </div>
           <div class="action-desc">
             <span class="action-name">{{ act.productName }}</span>
             <span class="action-details">{{ act.reason }}</span>

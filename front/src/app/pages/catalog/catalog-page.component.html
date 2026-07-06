@@ -24,20 +24,90 @@
 </header>
 
 <!-- Hero Section -->
-<section class="catalog-hero">
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="live-dot"></span>
-      Nueva Colección 2026
+<section class="hero-shell">
+  <div
+    #scrollContainer
+    (scroll)="onScroll()"
+    class="carousel-track-container"
+  >
+    <div class="carousel-track">
+      <div
+        *ngFor="let item of items; let i = index"
+        [id]="'slide-' + i"
+        class="hero-slide"
+      >
+        <div class="hero-images">
+          <div class="hero-image-panel hero-image-panel--primary">
+            <img
+              [src]="item.img"
+              [alt]="item.title"
+              class="hero-image"
+              loading="eager"
+            />
+          </div>
+          <div class="hero-image-panel hero-image-panel--secondary">
+            <img
+              [src]="item.img2"
+              [alt]="item.title"
+              class="hero-image"
+              loading="eager"
+            />
+          </div>
+        </div>
+
+        <div class="hero-overlay"></div>
+
+        <div class="hero-copy-wrap">
+          <div class="hero-copy">
+            <p class="hero-promo-tag">{{ item.promoTag }}</p>
+
+            <h2 class="hero-title">{{ item.title }}</h2>
+
+            <p class="hero-subtitle">{{ item.subtitle }}</p>
+
+            <p class="hero-description">{{ item.description }}</p>
+
+            <div class="hero-promo-badge">
+              <span class="hero-promo-icon">
+                <svg *ngIf="item.promoIcon === 'shipping'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V15a1 1 0 01-1 1h-1" />
+                </svg>
+                <svg *ngIf="item.promoIcon === 'discount'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 15L15 9M11 9.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm5 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                </svg>
+                <svg *ngIf="item.promoIcon === 'gift'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v14M19 12H5M20 8H4v4h16V8zm-8-4a3 3 0 00-3 3h6a3 3 0 00-3-3z" />
+                </svg>
+              </span>
+              <span class="hero-promo-text-wrap">
+                <span class="hero-promo-kicker" *ngIf="item.promoIcon === 'shipping'">Envío</span>
+                <span class="hero-promo-kicker" *ngIf="item.promoIcon === 'discount'">Descuento</span>
+                <span class="hero-promo-kicker" *ngIf="item.promoIcon === 'gift'">Detalle</span>
+                <span class="hero-promo-text">{{ item.promoText }}</span>
+              </span>
+            </div>
+
+            <a [routerLink]="item.link" class="hero-cta">
+              {{ item.ctaText }}
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
-    <h2 class="hero-title">
-      Viste la Elegancia<br>
-      <span class="hero-accent">Atemporal</span>
-    </h2>
-    <p class="hero-sub">
-      Explora prendas exclusivas confeccionadas con materiales de la más alta calidad.
-      Selecciona tus variantes y cotiza directo a tu WhatsApp.
-    </p>
+  </div>
+
+  <div class="hero-dots">
+    <button
+      *ngFor="let dot of items; let i = index"
+      (click)="scrollToSlide(i)"
+      [ngClass]="{
+        'is-active': i === currentSlide
+      }"
+      class="hero-dot"
+      type="button"
+      [attr.aria-label]="'Ir a la diapositiva ' + (i + 1)"
+    ></button>
   </div>
 </section>
 
