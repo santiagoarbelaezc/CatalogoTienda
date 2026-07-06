@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CategoriesService } from '../../../core/categories.service';
+import { ToastService } from '../../../core/toast.service';
 import { Categoria } from '../../../models/catalog.models';
 
 @Component({
@@ -24,7 +25,7 @@ export class CategoriesPageComponent implements OnInit, OnDestroy {
   editingName = '';
   deleteConfirmId: number | null = null;
 
-  constructor(private categoriesService: CategoriesService) {}
+  constructor(private categoriesService: CategoriesService, private toast: ToastService) {}
 
   ngOnInit() {
     this.sub = this.categoriesService.categories$.subscribe(cats => this.categories = cats);
@@ -38,8 +39,10 @@ export class CategoriesPageComponent implements OnInit, OnDestroy {
     if (!this.newName.trim()) return;
     if (this.newParentId !== null) {
       this.categoriesService.createSubcategory(this.newName.trim(), this.newParentId);
+      this.toast.success('Subcategoría creada exitosamente');
     } else {
       this.categoriesService.createParent(this.newName.trim());
+      this.toast.success('Categoría creada exitosamente');
     }
     this.newName = '';
     this.newParentId = null;
@@ -53,6 +56,7 @@ export class CategoriesPageComponent implements OnInit, OnDestroy {
   saveEdit() {
     if (this.editingId !== null && this.editingName.trim()) {
       this.categoriesService.updateCategory(this.editingId, this.editingName.trim());
+      this.toast.success('Categoría actualizada correctamente');
     }
     this.editingId = null;
     this.editingName = '';
@@ -70,6 +74,7 @@ export class CategoriesPageComponent implements OnInit, OnDestroy {
   executeDelete() {
     if (this.deleteConfirmId !== null) {
       this.categoriesService.deleteCategory(this.deleteConfirmId);
+      this.toast.success('Categoría eliminada del catálogo');
       this.deleteConfirmId = null;
     }
   }
