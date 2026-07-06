@@ -72,6 +72,10 @@ export class CatalogService {
     return obs;
   }
 
+  generateAIProductInfo(nombre: string): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/productos/ai-helper`, { nombre });
+  }
+
   update(id: number, changes: any): Observable<any> {
     const payload = this.transformPayload(changes);
     const obs = this.http.put<any>(`${environment.apiUrl}/productos/${id}`, payload).pipe(

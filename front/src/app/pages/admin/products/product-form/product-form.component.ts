@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CatalogService } from '../../../../core/catalog.service';
 import { CategoriesService } from '../../../../core/categories.service';
 import { BrandsService } from '../../../../core/brands.service';
@@ -24,7 +25,7 @@ interface VarianteForm {
   templateUrl: './product-form.component.html',
   styleUrls: ['./product-form.component.scss']
 })
-export class ProductFormComponent implements OnInit {
+export class ProductFormComponent implements OnInit, OnDestroy {
   isEditMode = false;
   editingId: number | null = null;
 
@@ -50,6 +51,8 @@ export class ProductFormComponent implements OnInit {
   tallas = TALLAS;
 
   isSaving = false;
+  isGeneratingAI = false;
+  private subs = new Subscription();
 
   constructor(
     private catalogService: CatalogService,
@@ -61,16 +64,38 @@ export class ProductFormComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.categorias = this.categoriesService.getAllFlat();
-    this.brandsService.brands$.subscribe(list => this.marcas = list);
+    this.subs.add(this.categoriesService.categories$.subscribe(() => {
+      this.categorias = this.categoriesService.getAllFlat();
+      if (this.categorias.length > 0 && this.categoriaId === null && !this.isEditMode) {
+        this.categoriaId = this.categorias[0].id;
+      }
+    }));
+    this.categoriesService.loadFromServer();
+
+    this.subs.add(this.brandsService.brands$.subscribe(list => {
+      this.marcas = list;
+      if (this.marcas.length > 0 && !this.marcaId && !this.isEditMode) {
+        this.marcaId = this.marcas[0].id;
+      }
+    }));
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditMode = true;
       this.editingId = +id;
-      const product = this.catalogService.getById(this.editingId);
-      if (product) this.loadProduct(product);
+      this.subs.add(this.catalogService.products$.subscribe(() => {
+        if (this.editingId) {
+          const product = this.catalogService.getById(this.editingId);
+          if (product) this.loadProduct(product);
+        }
+      }));
+      const initialProduct = this.catalogService.getById(this.editingId);
+      if (initialProduct) this.loadProduct(initialProduct);
     }
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   private loadProduct(p: Producto) {
@@ -107,9 +132,9 @@ export class ProductFormComponent implements OnInit {
 
     this.isSaving = true;
 
-    const categoria = this.categorias.find(c => c.id === this.categoriaId)!;
-    const marca = this.marcas.find(m => m.id === this.marcaId)!;
-    const tela = this.telas.find(t => t.id === this.telaId)!;
+    const categoria = this.categorias.find(c => c.id === Number(this.categoriaId)) || this.categorias[0];
+    const marca = this.marcas.find(m => m.id === Number(this.marcaId)) || this.marcas[0];
+    const tela = this.telas.find(t => t.id === Number(this.telaId)) || this.telas[0];
 
     const variantesBuilt: Variante[] = this.variantes.map((v, idx) => ({
       id: idx + 1,
@@ -152,6 +177,47 @@ export class ProductFormComponent implements OnInit {
         this.isSaving = false;
         console.error('Error al guardar el producto:', err);
         this.toast.error('Hubo un error al guardar el producto: ' + (err.error?.message || 'Error de servidor'));
+      }
+    });
+  }
+
+  generateWithAI() {
+    if (!this.nombre.trim()) {
+      this.toast.error('Por favor, escribe primero el nombre del producto para la IA');
+      return;
+    }
+
+    this.isGeneratingAI = true;
+    this.toast.info('✨ IA generando descripción y categoría... Por favor espera');
+
+    this.catalogService.generateAIProductInfo(this.nombre).subscribe({
+      next: (res) => {
+        this.isGeneratingAI = false;
+        if (res.success && res.data) {
+          if (res.data.descripcion) {
+            this.descripcion = res.data.descripcion;
+          }
+          if (res.data.categoria_id) {
+            const found = this.categorias.find(c => c.id === Number(res.data.categoria_id));
+            if (found) {
+              this.categoriaId = found.id;
+            }
+          }
+          if (res.data.genero && ['Hombre', 'Mujer', 'Unisex'].includes(res.data.genero)) {
+            this.genero = res.data.genero as any;
+          }
+          if (res.data.temporada) {
+            this.temporada = res.data.temporada;
+          }
+          this.toast.success('✨ ¡Listo! Descripción creada y categoría asignada automáticamente.');
+        } else {
+          this.toast.error('No se pudo autocompletar el producto con IA.');
+        }
+      },
+      error: (err) => {
+        this.isGeneratingAI = false;
+        console.error('Error IA:', err);
+        this.toast.error('Error del asistente IA: ' + (err.error?.message || 'Revisa tu conexión o clave API'));
       }
     });
   }

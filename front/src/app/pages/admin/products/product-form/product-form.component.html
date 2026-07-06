@@ -25,14 +25,20 @@
         <div class="field">
           <label class="form-label" for="prod-nombre">Nombre del Producto *</label>
           <input id="prod-nombre" type="text" [(ngModel)]="nombre" name="nombre" required
-                 class="form-input" placeholder="Ej: Camiseta Pima Essential">
+                 class="form-input" placeholder="Ej: Conjunto de Encaje Nocturno Negro">
         </div>
 
         <div class="field">
-          <label class="form-label" for="prod-desc">Descripción</label>
+          <div class="label-with-ai">
+            <label class="form-label" for="prod-desc">Descripción</label>
+            <button type="button" class="btn-ai" (click)="generateWithAI()" [disabled]="isGeneratingAI || !nombre" title="Autocompletar descripción y categoría con Inteligencia Artificial basándose en el nombre">
+              <span class="material-symbols-rounded ai-icon" [class.spinning]="isGeneratingAI">auto_awesome</span>
+              <span>{{ isGeneratingAI ? 'Generando con IA...' : '✨ Autocompletar con IA' }}</span>
+            </button>
+          </div>
           <textarea id="prod-desc" [(ngModel)]="descripcion" name="descripcion"
                     class="form-input form-textarea" rows="4"
-                    placeholder="Describe el producto..."></textarea>
+                    placeholder="Escribe el nombre arriba y haz clic en 'Autocompletar con IA' para generar la descripción automáticamente..."></textarea>
         </div>
 
         <div class="field-row">
