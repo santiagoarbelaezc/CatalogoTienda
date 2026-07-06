@@ -25,27 +25,60 @@ export class CategoriesPageComponent implements OnInit, OnDestroy {
   editingName = '';
   deleteConfirmId: number | null = null;
 
+  // Form UX state
+  formMode: 'parent' | 'sub' = 'parent';
+
   constructor(private categoriesService: CategoriesService, private toast: ToastService) {}
 
   ngOnInit() {
-    this.sub = this.categoriesService.categories$.subscribe(cats => this.categories = cats);
+    this.sub = this.categoriesService.categories$.subscribe(cats => {
+      this.categories = cats;
+      if (this.formMode === 'sub' && !this.newParentId && this.parentCategories.length > 0) {
+        this.newParentId = this.parentCategories[0].id;
+      }
+    });
   }
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
   }
 
+  setFormMode(mode: 'parent' | 'sub', parentId: number | null = null) {
+    this.formMode = mode;
+    if (mode === 'parent') {
+      this.newParentId = null;
+    } else if (parentId !== null) {
+      this.newParentId = parentId;
+    } else if (this.parentCategories.length > 0 && !this.newParentId) {
+      this.newParentId = this.parentCategories[0].id;
+    }
+  }
+
+  quickAddSub(parentCat: Categoria) {
+    this.setFormMode('sub', parentCat.id);
+    setTimeout(() => {
+      const inputEl = document.getElementById('cat-nombre');
+      if (inputEl) {
+        inputEl.focus();
+      }
+    }, 50);
+  }
+
   createCategory() {
     if (!this.newName.trim()) return;
-    if (this.newParentId !== null) {
+    if (this.formMode === 'sub' && this.newParentId === null) {
+      this.toast.error('Selecciona una categoría principal para la subcategoría');
+      return;
+    }
+
+    if (this.formMode === 'sub' && this.newParentId !== null) {
       this.categoriesService.createSubcategory(this.newName.trim(), this.newParentId);
       this.toast.success('Subcategoría creada exitosamente');
     } else {
       this.categoriesService.createParent(this.newName.trim());
-      this.toast.success('Categoría creada exitosamente');
+      this.toast.success('Categoría principal creada exitosamente');
     }
     this.newName = '';
-    this.newParentId = null;
   }
 
   startEdit(cat: Categoria) {
