@@ -25,6 +25,8 @@ export class AdminShellComponent implements OnInit {
     { label: 'Productos',   icon: 'inventory_2',  route: '/admin/products' },
     { label: 'Categorías',  icon: 'category',     route: '/admin/categories' },
     { label: 'Marcas',      icon: 'style',        route: '/admin/brands' },
+    { label: 'Analíticas',  icon: 'monitoring',   route: '/admin/analytics' },
+    { label: 'Reportes',    icon: 'description',  route: '/admin/reports' },
   ];
 
   constructor(private auth: AuthService) {}

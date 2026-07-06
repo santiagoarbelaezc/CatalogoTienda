@@ -67,6 +67,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin/brands/brands-page.component').then(m => m.BrandsPageComponent)
       },
+
+      // Analytics
+      {
+        path: 'analytics',
+        loadComponent: () =>
+          import('./pages/admin/analytics/analytics-page.component').then(m => m.AnalyticsPageComponent)
+      },
+
+      // Reports
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./pages/admin/reports/reports-page.component').then(m => m.ReportsPageComponent)
+      },
     ]
   },
 

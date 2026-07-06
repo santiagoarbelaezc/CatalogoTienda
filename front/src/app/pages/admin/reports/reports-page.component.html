@@ -1,0 +1,141 @@
+<div class="reports-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Generador de Reportes</h1>
+      <p class="page-subtitle">Configura, filtra y descarga informes de tu inventario y catálogo en formato CSV o PDF</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-secondary" (click)="printReport()">
+        <span class="material-symbols-rounded">print</span>
+        Imprimir / PDF
+      </button>
+      <button type="button" class="btn-primary" (click)="exportCSV()" [disabled]="rows.length === 0">
+        <span class="material-symbols-rounded">download</span>
+        Exportar CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="filters-card card no-print">
+    <div class="filters-grid">
+      <div class="field">
+        <label class="form-label" for="rep-type">Tipo de Reporte</label>
+        <select id="rep-type" [(ngModel)]="reportType" (change)="generateReport()" class="form-select">
+          <option value="stock">Inventario y Stock General</option>
+          <option value="catalog">Listado General de Productos</option>
+          <option value="pricing">Auditoría de Precios y Variantes</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="form-label" for="rep-cat">Filtrar por Categoría</label>
+        <select id="rep-cat" [(ngModel)]="categoryFilter" (change)="generateReport()" class="form-select">
+          <option [ngValue]="null">— Todas las Categorías —</option>
+          <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="form-label" for="rep-brand">Filtrar por Marca</label>
+        <select id="rep-brand" [(ngModel)]="brandFilter" (change)="generateReport()" class="form-select">
+          <option [ngValue]="null">— Todas las Marcas —</option>
+          <option *ngFor="let m of brands" [ngValue]="m.id">{{ m.nombre }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="form-label" for="rep-stock">Estado / Condición</label>
+        <select id="rep-stock" [(ngModel)]="stockFilter" (change)="generateReport()" class="form-select">
+          <option value="all">Todos los estados</option>
+          <option value="active">Solo Activos</option>
+          <option value="low">Bajo Stock (&lt; 5 unidades)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Pills -->
+  <div class="summary-pills">
+    <div class="summary-pill card">
+      <span class="pill-label">Total Productos Encontrados</span>
+      <span class="pill-value">{{ totalItems }}</span>
+    </div>
+    <div class="summary-pill card">
+      <span class="pill-label">Unidades Totales en Stock</span>
+      <span class="pill-value">{{ totalStock }} un.</span>
+    </div>
+    <div class="summary-pill card">
+      <span class="pill-label">Valor Total del Inventario</span>
+      <span class="pill-value">$ {{ totalInventoryValue | number }}</span>
+    </div>
+  </div>
+
+  <!-- Report Data Table -->
+  <div class="table-card card">
+    <div class="table-header">
+      <h3 class="section-title">
+        {{ reportType === 'stock' ? 'Reporte de Inventario y Stock' : (reportType === 'catalog' ? 'Catálogo General de Productos' : 'Auditoría de Precios') }}
+      </h3>
+      <span class="count-badge">{{ rows.length }} registros</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Marca</th>
+            <th>Precio Base</th>
+            <th>Variantes</th>
+            <th>Stock Total</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows">
+            <td>
+              <span class="sku-text">{{ row.sku }}</span>
+            </td>
+            <td>
+              <span class="prod-name">{{ row.nombre }}</span>
+            </td>
+            <td>
+              <span class="cat-badge">{{ row.categoria }}</span>
+            </td>
+            <td>
+              <span class="brand-badge">{{ row.marca }}</span>
+            </td>
+            <td>
+              <span class="price-val">$ {{ row.precioBase | number }}</span>
+            </td>
+            <td>
+              <span class="var-count">{{ row.totalVariantes }} var.</span>
+            </td>
+            <td>
+              <span class="stock-badge" [class.low]="row.stockTotal < 5">
+                {{ row.stockTotal }} un.
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [class.active]="row.estado === 'Activo'">
+                {{ row.estado }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Empty state -->
+      <div class="empty-report" *ngIf="rows.length === 0">
+        <span class="material-symbols-rounded">manage_search</span>
+        <p>No se encontraron productos que coincidan con los filtros seleccionados</p>
+      </div>
+    </div>
+  </div>
+
+</div>

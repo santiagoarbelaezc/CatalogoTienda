@@ -1,0 +1,110 @@
+<div class="analytics-page animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Analíticas y Conversión</h1>
+      <p class="page-subtitle">Monitorea el rendimiento en tiempo real de tu catálogo y cotizaciones</p>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div *ngFor="let kpi of kpis" class="kpi-card card">
+      <div class="kpi-header">
+        <span class="kpi-title">{{ kpi.title }}</span>
+        <span class="material-symbols-rounded kpi-icon">{{ kpi.icon }}</span>
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ kpi.value }}</span>
+        <div class="kpi-trend" [class.positive]="kpi.trend >= 0" [class.negative]="kpi.trend < 0">
+          <span class="material-symbols-rounded">
+            {{ kpi.trend >= 0 ? 'trending_up' : 'trending_down' }}
+          </span>
+          <span>{{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}% {{ kpi.trendLabel }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-grid">
+    <!-- Category Doughnut -->
+    <div class="chart-card card">
+      <div class="chart-header">
+        <h3>Distribución por Categoría</h3>
+        <span class="chart-badge">Productos Activos</span>
+      </div>
+      <div class="chart-container">
+        <canvas #catChart></canvas>
+      </div>
+    </div>
+
+    <!-- WhatsApp Bar Chart -->
+    <div class="chart-card card">
+      <div class="chart-header">
+        <h3>Cotizaciones por Día (WhatsApp)</h3>
+        <span class="chart-badge">Semana Actual</span>
+      </div>
+      <div class="chart-container">
+        <canvas #waChart></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Variants Table -->
+  <div class="table-card card">
+    <div class="table-header">
+      <div>
+        <h3 class="section-title">Variantes Más Consultadas</h3>
+        <p class="section-subtitle">Las tallas y colores que generan mayor interés en cotizaciones</p>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Producto / SKU</th>
+            <th>Color</th>
+            <th>Talla</th>
+            <th>Consultas (WA)</th>
+            <th>Tasa Conv.</th>
+            <th>Stock Actual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of topVariants">
+            <td>
+              <div class="prod-cell">
+                <span class="prod-name">{{ item.productoNombre }}</span>
+                <span class="prod-sku">{{ item.sku }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="color-cell">
+                <span class="color-swatch" [style.backgroundColor]="item.colorHex"></span>
+                <span>{{ item.colorNombre }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge-talla">{{ item.talla }}</span>
+            </td>
+            <td>
+              <span class="inq-val">{{ item.inquiries }}</span>
+            </td>
+            <td>
+              <span class="conv-val">{{ item.conversion }}</span>
+            </td>
+            <td>
+              <span class="stock-badge" [class.low]="item.stock < 5">
+                {{ item.stock }} un.
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
