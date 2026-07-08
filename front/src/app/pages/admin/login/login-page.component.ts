@@ -20,8 +20,8 @@ export class LoginPageComponent {
     { icon: 'chat', text: 'Integración con WhatsApp' },
   ];
   
-  email = 'admin1@tiendaintima.com';
-  password = 'Tienda-Intima123';
+  email = '';
+  password = '';
   isLoading = false;
   errorMessage = '';
 
