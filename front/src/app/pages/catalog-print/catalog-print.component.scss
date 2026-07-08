@@ -13,6 +13,39 @@
   background: #fff;
 }
 
+.no-print-actions {
+  display: flex;
+  margin-bottom: 1.5rem;
+  
+  @media print {
+    display: none;
+  }
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: background 0.2s ease;
+
+  .material-symbols-rounded {
+    font-size: 1.2rem;
+  }
+
+  &:hover {
+    background: #333;
+  }
+}
+
 .print-header {
   display: flex;
   justify-content: space-between;

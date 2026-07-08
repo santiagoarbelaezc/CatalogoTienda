@@ -1,0 +1,43 @@
+# Apache: redirige todas las peticiones a index.php
+# Hostinger usa Apache con mod_rewrite habilitado
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Servir archivos y directorios físicos directamente
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Todo lo demás → index.php
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Seguridad: bloquear acceso a archivos sensibles
+<FilesMatch "\.(env|json|lock|md|sql|sh|yml|yaml)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Headers de seguridad
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options    "nosniff"
+    Header always set X-Frame-Options           "DENY"
+    Header always set X-XSS-Protection         "1; mode=block"
+    Header always set Referrer-Policy           "strict-origin-when-cross-origin"
+</IfModule>
+
+# Comprimir respuestas JSON
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE text/plain
+</IfModule>
+
+# Cache control para respuestas API (sin caché)
+<IfModule mod_headers.c>
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    </FilesMatch>
+</IfModule>

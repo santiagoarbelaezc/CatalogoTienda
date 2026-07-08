@@ -1,0 +1,23 @@
+# ── Configuración General de Git ──────────────────────────────
+# Ignorar archivos de variables de entorno (Credenciales)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# ── Dependencias y Compilación ───────────────────────────────
+**/node_modules/
+**/vendor/
+**/dist/
+**/.angular/
+
+# ── Archivos de Sistema e IDEs ───────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

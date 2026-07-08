@@ -1,0 +1,21 @@
+# ── Dependencias ─────────────────────────────────────────────
+/vendor/
+
+# ── Credenciales — NUNCA subir al repositorio ────────────────
+.env
+
+# ── Logs & caché ─────────────────────────────────────────────
+*.log
+/logs/
+/cache/
+
+# ── IDEs ─────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Composer lock (opcional en proyectos propios) ─────────────
+# composer.lock
