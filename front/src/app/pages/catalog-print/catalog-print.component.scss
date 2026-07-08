@@ -15,6 +15,7 @@
 
 .no-print-actions {
   display: flex;
+  gap: 1rem;
   margin-bottom: 1.5rem;
   
   @media print {
@@ -22,7 +23,7 @@
   }
 }
 
-.btn-back {
+.btn-back, .btn-print-manual {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -31,6 +32,8 @@
   background: #111;
   color: #fff;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -43,6 +46,13 @@
 
   &:hover {
     background: #333;
+  }
+}
+
+.btn-print-manual {
+  background: #2563eb;
+  &:hover {
+    background: #1d4ed8;
   }
 }
 
