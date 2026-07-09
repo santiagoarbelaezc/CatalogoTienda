@@ -17,7 +17,10 @@ final class Cors
         $origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
         $allowed = self::getAllowedOrigins();
 
-        if ($origin !== '' && in_array($origin, $allowed, true)) {
+        // Siempre permitir explícitamente localhost:4200 y 127.0.0.1:4200 además de la lista configurada en .env
+        $devOrigins = ['http://localhost:4200', 'http://127.0.0.1:4200'];
+
+        if ($origin !== '' && (in_array($origin, $allowed, true) || in_array($origin, $devOrigins, true))) {
             header('Access-Control-Allow-Origin: ' . $origin);
             header('Vary: Origin');
         } elseif (empty($allowed)) {

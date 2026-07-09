@@ -19,3 +19,13 @@ Thumbs.db
 
 # ── Composer lock (opcional en proyectos propios) ─────────────
 # composer.lock
+
+# ── Archivos comprimidos y respaldos ─────────────────────────
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.bak

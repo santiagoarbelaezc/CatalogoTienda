@@ -21,3 +21,13 @@
 *.swo
 .DS_Store
 Thumbs.db
+
+# ── Archivos Comprimidos y Respaldos ─────────────────────────
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.bak
