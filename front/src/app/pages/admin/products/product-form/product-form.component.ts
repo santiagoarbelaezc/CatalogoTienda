@@ -251,15 +251,59 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     }
   }
 
+  validateVariantStock(variant: any) {
+    if (variant.stock !== null && variant.stock !== undefined && variant.stock < 0) {
+      variant.stock = 0;
+      this.toast.error('El stock no puede ser un número negativo.');
+    }
+  }
+
   save() {
-    if (!this.nombre.trim() || this.categoriaId === null) return;
-    if (this.precioBase < 0) {
+    const trimmedName = this.nombre.trim();
+    if (!trimmedName || trimmedName.length < 3) {
+      this.toast.error('El nombre del producto debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (this.categoriaId === null) {
+      this.toast.error('Por favor selecciona una categoría válida.');
+      return;
+    }
+    if (!this.marcaId) {
+      this.toast.error('Por favor selecciona una marca válida.');
+      return;
+    }
+    if (this.precioBase < 0 || isNaN(this.precioBase)) {
       this.toast.error('El precio base no puede ser negativo.');
       return;
     }
-    if (this.variantes.some(v => (v.precio || 0) < 0)) {
-      this.toast.error('El precio de una variante no puede ser negativo.');
+
+    if (!this.variantes || this.variantes.length === 0) {
+      this.toast.error('El producto debe contener al menos una variante.');
       return;
+    }
+
+    const seenSkus = new Set<string>();
+    for (let i = 0; i < this.variantes.length; i++) {
+      const v = this.variantes[i];
+      const sku = (v.sku || '').trim().toUpperCase();
+      if (!sku) {
+        this.toast.error(`La variante #${i + 1} requiere un código SKU.`);
+        return;
+      }
+      if (seenSkus.has(sku)) {
+        this.toast.error(`El código SKU '${sku}' está repetido en la lista de variantes.`);
+        return;
+      }
+      seenSkus.add(sku);
+
+      if ((v.precio || 0) < 0) {
+        this.toast.error(`El precio de la variante '${sku}' no puede ser negativo.`);
+        return;
+      }
+      if ((v.stock || 0) < 0) {
+        this.toast.error(`El stock de la variante '${sku}' no puede ser negativo.`);
+        return;
+      }
     }
 
     this.isSaving = true;
@@ -270,15 +314,15 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
     const variantesBuilt: any[] = this.variantes.map((v, idx) => ({
       id: v.id || null,
-      sku: v.sku || `SKU-${idx + 1}`,
-      precio: v.precio || this.precioBase,
-      stock: v.stock,
+      sku: (v.sku || `SKU-${idx + 1}`).trim().toUpperCase(),
+      precio: v.precio !== undefined ? v.precio : this.precioBase,
+      stock: v.stock || 0,
       color: this.colores.find(c => c.id === v.colorId)!,
       talla: this.tallas.find(t => t.id === v.tallaId)!
     }));
 
     const productData = {
-      nombre: this.nombre,
+      nombre: trimmedName,
       descripcion: this.descripcion,
       precio_base: this.precioBase,
       genero: this.genero,
@@ -321,7 +365,16 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isSaving = false;
         console.error('Error al guardar el producto:', err);
-        this.toast.error('Hubo un error al guardar el producto: ' + (err.error?.message || 'Error de servidor'));
+
+        let errorMsg = 'Error al guardar el producto.';
+        if (err.error?.errors && typeof err.error.errors === 'object') {
+          const fieldMsgs = Object.values(err.error.errors).flat();
+          errorMsg = fieldMsgs.join(' | ');
+        } else if (err.error?.message) {
+          errorMsg = err.error.message;
+        }
+
+        this.toast.error(errorMsg);
       }
     });
   }

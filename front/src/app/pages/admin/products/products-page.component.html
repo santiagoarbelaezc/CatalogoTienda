@@ -24,6 +24,10 @@
         placeholder="Buscar por nombre o categoría..."
         class="search-input">
     </div>
+    <button type="button" class="btn-select-all-toggle" (click)="isAllSelected() ? clearSelection() : toggleSelectAll({ target: { checked: true } })" *ngIf="filteredProducts.length > 0">
+      <span class="material-symbols-rounded">{{ isAllSelected() ? 'deselect' : 'select_all' }}</span>
+      <span>{{ isAllSelected() ? 'Deseleccionar todos' : 'Seleccionar todos (' + filteredProducts.length + ')' }}</span>
+    </button>
     <span class="results-count">{{ filteredProducts.length }} resultados</span>
   </div>
 
@@ -51,7 +55,7 @@
         <thead>
           <tr>
             <th class="checkbox-col">
-              <label class="custom-checkbox">
+              <label class="custom-checkbox" title="Seleccionar todos los productos">
                 <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll($event)">
                 <span class="checkmark"></span>
               </label>
@@ -165,8 +169,10 @@
     <h3>¿Eliminar {{ selectedIds.size }} productos?</h3>
     <p>Estás a punto de eliminar <strong>{{ selectedIds.size }}</strong> productos seleccionados del catálogo. Esta acción no se puede deshacer.</p>
     <div class="modal-actions">
-      <button type="button" class="btn-secondary" (click)="cancelBatchDelete()">Cancelar</button>
-      <button type="button" class="btn-danger" (click)="executeBatchDelete()">Eliminar todos ({{ selectedIds.size }})</button>
+      <button type="button" class="btn-secondary" (click)="cancelBatchDelete()" [disabled]="isBatchDeleting">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="executeBatchDelete()" [disabled]="isBatchDeleting">
+        {{ isBatchDeleting ? 'Eliminando...' : 'Eliminar todos (' + selectedIds.size + ')' }}
+      </button>
     </div>
   </div>
 </div>

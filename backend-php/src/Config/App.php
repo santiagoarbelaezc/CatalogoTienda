@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Config;
 
 use App\Exceptions\HttpException;
+use App\Exceptions\ValidationException;
 use App\Routes\Router;
 use App\Utils\Response;
 use Throwable;
@@ -38,15 +39,17 @@ final class App
         // ── Parsear body JSON ─────────────────────────────────────────
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (str_contains($contentType, 'application/json')) {
-            $raw  = file_get_contents('php://input');
-            $body = json_decode($raw, true);
+            $raw = file_get_contents('php://input');
+            if ($raw !== false && trim($raw) !== '') {
+                $body = json_decode($raw, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Response::error('JSON inválido en el cuerpo de la petición', 400);
-                exit;
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Response::error('JSON inválido en el cuerpo de la petición', 400);
+                    exit;
+                }
+
+                $_POST = $body ?? [];
             }
-
-            $_POST = $body ?? [];
         }
 
         // ── Router ────────────────────────────────────────────────────
@@ -75,7 +78,10 @@ final class App
             ? $e->getStatusCode()
             : 500;
 
-        $payload = ['message' => $e->getMessage()];
+        $payload = [];
+        if ($e instanceof ValidationException) {
+            $payload['errors'] = $e->getErrors();
+        }
 
         if ($debug) {
             $payload['exception'] = get_class($e);
@@ -92,7 +98,7 @@ final class App
             $e->getLine()
         ));
 
-        Response::error($e->getMessage(), $statusCode, $debug ? $payload : []);
+        Response::error($e->getMessage(), $statusCode, $payload);
     }
 
     /**

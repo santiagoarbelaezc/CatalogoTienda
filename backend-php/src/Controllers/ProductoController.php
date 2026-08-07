@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
 use App\Models\Producto;
 use App\Utils\Pagination;
 use App\Utils\Response;
@@ -51,36 +52,92 @@ final class ProductoController extends BaseController
 
     public function store(): void
     {
-        $v = new Validator($this->body());
-        $v->required(['nombre', 'precio_base'])
+        $raw = $this->body();
+
+        // Normalizar llaves anidadas enviadas desde el cliente ({ categoria: { id: 1 } })
+        if (!isset($raw['id_categoria']) && isset($raw['categoria']['id'])) {
+            $raw['id_categoria'] = $raw['categoria']['id'];
+        }
+        if (!isset($raw['id_marca']) && isset($raw['marca']['id'])) {
+            $raw['id_marca'] = $raw['marca']['id'];
+        }
+        if (!isset($raw['id_tela']) && isset($raw['tela']['id'])) {
+            $raw['id_tela'] = $raw['tela']['id'];
+        }
+
+        $v = new Validator($raw);
+        $v->required(['nombre', 'precio_base', 'id_categoria', 'id_marca'])
+          ->minLength('nombre', 3)
           ->maxLength('nombre', 200)
-          ->numeric(['precio_base'])
+          ->numeric(['precio_base', 'id_categoria', 'id_marca'])
           ->positiveNumeric(['precio_base'])
           ->inList('genero', ['Hombre', 'Mujer', 'Unisex'])
-          ->optional(['descripcion', 'genero', 'temporada', 'activo',
-                      'id_categoria', 'id_marca', 'id_tela']);
+          ->optional(['descripcion', 'genero', 'temporada', 'activo', 'id_tela']);
 
         $data = $v->validateOrFail();
+        $this->validateForeignKeys($data);
 
-        $id = $this->model->create($data);
+        $variantes = $raw['variantes'] ?? [];
+        if (!is_array($variantes) || empty($variantes)) {
+            throw new ValidationException([
+                'variantes' => ['El producto debe incluir al menos una variante con SKU, talla y color.']
+            ]);
+        }
 
-        $body = $this->body();
-        if (isset($body['variantes']) && is_array($body['variantes'])) {
-            $varianteModel = new \App\Models\Variante($this->pdo);
-            foreach ($body['variantes'] as $variant) {
-                $varianteModel->create([
-                    'id_producto' => $id,
-                    'id_color'    => $variant['color']['id'] ?? null,
-                    'id_talla'    => $variant['talla']['id'] ?? null,
-                    'sku'         => $variant['sku'],
-                    'precio'      => $variant['precio'] ?? $data['precio_base'],
-                    'stock'       => $variant['stock'] ?? 0,
+        $varianteModel = new \App\Models\Variante($this->pdo);
+        $seenSkus = [];
+
+        foreach ($variantes as $idx => $var) {
+            $sku = strtoupper(trim((string)($var['sku'] ?? '')));
+            if ($sku === '') {
+                throw new ValidationException([
+                    "variantes.{$idx}.sku" => ["El SKU de la variante #" . ($idx + 1) . " no puede estar vacío."]
+                ]);
+            }
+
+            if (in_array($sku, $seenSkus, true)) {
+                throw new ValidationException([
+                    "variantes.{$idx}.sku" => ["El SKU '{$sku}' está duplicado en la lista enviada."]
+                ]);
+            }
+            $seenSkus[] = $sku;
+
+            if ($varianteModel->skuExists($sku)) {
+                throw new ValidationException([
+                    "variantes.{$idx}.sku" => ["El SKU '{$sku}' ya se encuentra registrado en la base de datos."]
+                ]);
+            }
+
+            $precio = isset($var['precio']) ? (float)$var['precio'] : (float)$data['precio_base'];
+            if ($precio < 0) {
+                throw new ValidationException([
+                    "variantes.{$idx}.precio" => ["El precio de la variante '{$sku}' no puede ser negativo."]
+                ]);
+            }
+
+            $stock = isset($var['stock']) ? (int)$var['stock'] : 0;
+            if ($stock < 0) {
+                throw new ValidationException([
+                    "variantes.{$idx}.stock" => ["El stock de la variante '{$sku}' no puede ser negativo."]
                 ]);
             }
         }
 
-        $product = $this->model->findById($id);
+        $id = $this->model->create($data);
 
+        foreach ($variantes as $variant) {
+            $sku = strtoupper(trim((string)$variant['sku']));
+            $varianteModel->create([
+                'id_producto' => $id,
+                'id_color'    => $variant['color']['id'] ?? $variant['id_color'] ?? null,
+                'id_talla'    => $variant['talla']['id'] ?? $variant['id_talla'] ?? null,
+                'sku'         => $sku,
+                'precio'      => isset($variant['precio']) ? (float)$variant['precio'] : (float)$data['precio_base'],
+                'stock'       => isset($variant['stock']) ? (int)$variant['stock'] : 0,
+            ]);
+        }
+
+        $product = $this->model->findById($id);
         Response::created($product, "/api/productos/{$id}");
     }
 
@@ -92,61 +149,116 @@ final class ProductoController extends BaseController
             throw new NotFoundException("Producto #{$id} no encontrado.");
         }
 
-        $v = new Validator($this->body());
-        $v->required(['nombre', 'precio_base'])
+        $raw = $this->body();
+
+        if (!isset($raw['id_categoria']) && isset($raw['categoria']['id'])) {
+            $raw['id_categoria'] = $raw['categoria']['id'];
+        }
+        if (!isset($raw['id_marca']) && isset($raw['marca']['id'])) {
+            $raw['id_marca'] = $raw['marca']['id'];
+        }
+        if (!isset($raw['id_tela']) && isset($raw['tela']['id'])) {
+            $raw['id_tela'] = $raw['tela']['id'];
+        }
+
+        $v = new Validator($raw);
+        $v->required(['nombre', 'precio_base', 'id_categoria', 'id_marca'])
+          ->minLength('nombre', 3)
           ->maxLength('nombre', 200)
-          ->numeric(['precio_base'])
+          ->numeric(['precio_base', 'id_categoria', 'id_marca'])
           ->positiveNumeric(['precio_base'])
           ->inList('genero', ['Hombre', 'Mujer', 'Unisex'])
-          ->optional(['descripcion', 'genero', 'temporada', 'activo',
-                      'id_categoria', 'id_marca', 'id_tela']);
+          ->optional(['descripcion', 'genero', 'temporada', 'activo', 'id_tela']);
 
         $data = $v->validateOrFail();
+        $this->validateForeignKeys($data);
 
-        $this->model->update($id, $data);
+        $variantes = $raw['variantes'] ?? [];
+        if (!is_array($variantes) || empty($variantes)) {
+            throw new ValidationException([
+                'variantes' => ['El producto debe mantener al menos una variante activa.']
+            ]);
+        }
 
-        $body = $this->body();
-        if (isset($body['variantes']) && is_array($body['variantes'])) {
-            $varianteModel = new \App\Models\Variante($this->pdo);
+        $varianteModel = new \App\Models\Variante($this->pdo);
+        $existingVariantes = $varianteModel->findByProducto($id);
+        $existingIds = array_map(fn($var) => (int) $var['id'], $existingVariantes);
 
-            // Cargar variantes actuales de la BD
-            $existingVariantes = $varianteModel->findByProducto($id);
-            $existingIds = array_map(fn($var) => (int) $var['id'], $existingVariantes);
-            $sentIds = [];
+        $seenSkus = [];
+        foreach ($variantes as $idx => $var) {
+            $sku = strtoupper(trim((string)($var['sku'] ?? '')));
+            if ($sku === '') {
+                throw new ValidationException([
+                    "variantes.{$idx}.sku" => ["El SKU de la variante #" . ($idx + 1) . " no puede estar vacío."]
+                ]);
+            }
 
-            foreach ($body['variantes'] as $variant) {
-                $vId = isset($variant['id']) ? (int) $variant['id'] : null;
-                $vData = [
-                    'id_producto' => $id,
-                    'id_color'    => $variant['color']['id'] ?? null,
-                    'id_talla'    => $variant['talla']['id'] ?? null,
-                    'sku'         => $variant['sku'],
-                    'precio'      => $variant['precio'] ?? $data['precio_base'],
-                    'stock'       => $variant['stock'] ?? 0,
-                ];
+            if (in_array($sku, $seenSkus, true)) {
+                throw new ValidationException([
+                    "variantes.{$idx}.sku" => ["El SKU '{$sku}' está duplicado en la lista enviada."]
+                ]);
+            }
+            $seenSkus[] = $sku;
 
-                if ($vId && in_array($vId, $existingIds, true)) {
-                    $varianteModel->update($vId, $vData);
-                    $sentIds[] = $vId;
-                } else {
-                    // Si el SKU ya existe en este mismo producto, actualizar esa variante
-                    $existingBySku = $varianteModel->findBySku($vData['sku']);
-                    if ($existingBySku && (int) $existingBySku['id_producto'] === $id) {
-                        $skuId = (int) $existingBySku['id'];
-                        $varianteModel->update($skuId, $vData);
-                        $sentIds[] = $skuId;
-                    } else {
-                        $newId = $varianteModel->create($vData);
-                        $sentIds[] = $newId;
-                    }
+            $vId = isset($var['id']) ? (int) $var['id'] : null;
+            if ($varianteModel->skuExists($sku, $vId)) {
+                $existingBySku = $varianteModel->findBySku($sku);
+                if (!$existingBySku || (int)$existingBySku['id_producto'] !== $id) {
+                    throw new ValidationException([
+                        "variantes.{$idx}.sku" => ["El SKU '{$sku}' ya se encuentra registrado en otro producto."]
+                    ]);
                 }
             }
 
-            // Eliminar variantes que ya no fueron enviadas desde el frontend
-            foreach ($existingIds as $exId) {
-                if (!in_array($exId, $sentIds, true)) {
-                    $varianteModel->delete($exId);
+            $precio = isset($var['precio']) ? (float)$var['precio'] : (float)$data['precio_base'];
+            if ($precio < 0) {
+                throw new ValidationException([
+                    "variantes.{$idx}.precio" => ["El precio de la variante '{$sku}' no puede ser negativo."]
+                ]);
+            }
+
+            $stock = isset($var['stock']) ? (int)$var['stock'] : 0;
+            if ($stock < 0) {
+                throw new ValidationException([
+                    "variantes.{$idx}.stock" => ["El stock de la variante '{$sku}' no puede ser negativo."]
+                ]);
+            }
+        }
+
+        $this->model->update($id, $data);
+
+        $sentIds = [];
+        foreach ($variantes as $variant) {
+            $vId = isset($variant['id']) ? (int) $variant['id'] : null;
+            $sku = strtoupper(trim((string)$variant['sku']));
+            $vData = [
+                'id_producto' => $id,
+                'id_color'    => $variant['color']['id'] ?? $variant['id_color'] ?? null,
+                'id_talla'    => $variant['talla']['id'] ?? $variant['id_talla'] ?? null,
+                'sku'         => $sku,
+                'precio'      => isset($variant['precio']) ? (float)$variant['precio'] : (float)$data['precio_base'],
+                'stock'       => isset($variant['stock']) ? (int)$variant['stock'] : 0,
+            ];
+
+            if ($vId && in_array($vId, $existingIds, true)) {
+                $varianteModel->update($vId, $vData);
+                $sentIds[] = $vId;
+            } else {
+                $existingBySku = $varianteModel->findBySku($sku);
+                if ($existingBySku && (int) $existingBySku['id_producto'] === $id) {
+                    $skuId = (int) $existingBySku['id'];
+                    $varianteModel->update($skuId, $vData);
+                    $sentIds[] = $skuId;
+                } else {
+                    $newId = $varianteModel->create($vData);
+                    $sentIds[] = $newId;
                 }
+            }
+        }
+
+        foreach ($existingIds as $exId) {
+            if (!in_array($exId, $sentIds, true)) {
+                $varianteModel->delete($exId);
             }
         }
 
@@ -161,9 +273,39 @@ final class ProductoController extends BaseController
             throw new NotFoundException("Producto #{$id} no encontrado.");
         }
 
-        $this->model->softDelete($id);
+        $query = $this->queryAll();
+        if (isset($query['force']) && filter_var($query['force'], FILTER_VALIDATE_BOOLEAN)) {
+            $this->model->hardDelete($id);
+        } else {
+            $this->model->softDelete($id);
+        }
 
         Response::noContent();
+    }
+
+    private function validateForeignKeys(array $data): void
+    {
+        if (isset($data['id_categoria'])) {
+            $catId = (int) $data['id_categoria'];
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM categorias WHERE id = ?");
+            $stmt->execute([$catId]);
+            if ((int)$stmt->fetchColumn() === 0) {
+                throw new ValidationException([
+                    'id_categoria' => ["La categoría con ID {$catId} no existe en el catálogo."]
+                ]);
+            }
+        }
+
+        if (isset($data['id_marca'])) {
+            $marcaId = (int) $data['id_marca'];
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM marcas WHERE id = ?");
+            $stmt->execute([$marcaId]);
+            if ((int)$stmt->fetchColumn() === 0) {
+                throw new ValidationException([
+                    'id_marca' => ["La marca con ID {$marcaId} no existe en el catálogo."]
+                ]);
+            }
+        }
     }
 
     public function aiHelper(): void

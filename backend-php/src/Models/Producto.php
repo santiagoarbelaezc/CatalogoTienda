@@ -160,6 +160,9 @@ final class Producto extends BaseModel
     /** Hard delete (para uso desde admin consciente) */
     public function hardDelete(int $id): bool
     {
+        $this->execute('DELETE FROM producto_proveedor WHERE id_producto = ?', [$id]);
+        $this->execute('DELETE FROM variantes WHERE id_producto = ?', [$id]);
+        $this->execute('DELETE FROM imagenes WHERE id_producto = ?', [$id]);
         return $this->execute('DELETE FROM productos WHERE id = ?', [$id]) > 0;
     }
 

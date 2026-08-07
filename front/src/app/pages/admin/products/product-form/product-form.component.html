@@ -109,7 +109,7 @@
               <div class="field">
                 <label class="form-label">Stock</label>
                 <input type="number" [(ngModel)]="v.stock" [name]="'stock-' + i"
-                       class="form-input" placeholder="0" min="0">
+                       class="form-input" placeholder="0" min="0" (ngModelChange)="validateVariantStock(v)">
               </div>
             </div>
 

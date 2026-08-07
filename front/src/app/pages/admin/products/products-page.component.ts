@@ -23,10 +23,11 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
   // Batch selection
   selectedIds: Set<number> = new Set<number>();
   showBatchDeleteModal = false;
+  isBatchDeleting = false;
 
   private sub!: Subscription;
 
-  constructor(private catalogService: CatalogService, private toast: ToastService) {}
+  constructor(private catalogService: CatalogService, private toast: ToastService) { }
 
   ngOnInit() {
     this.sub = this.catalogService.products$.subscribe(products => {
@@ -43,10 +44,10 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
     const q = this.searchQuery.toLowerCase().trim();
     this.filteredProducts = q
       ? this.allProducts.filter(p =>
-          p.nombre.toLowerCase().includes(q) ||
-          p.marca.nombre.toLowerCase().includes(q) ||
-          p.categoria.nombre.toLowerCase().includes(q)
-        )
+        p.nombre.toLowerCase().includes(q) ||
+        p.marca.nombre.toLowerCase().includes(q) ||
+        p.categoria.nombre.toLowerCase().includes(q)
+      )
       : [...this.allProducts];
 
     // Clean up selectedIds that no longer exist
@@ -91,15 +92,38 @@ export class ProductsPageComponent implements OnInit, OnDestroy {
   }
 
   executeBatchDelete() {
-    const count = this.selectedIds.size;
-    if (count > 0) {
-      this.selectedIds.forEach(id => {
-        this.catalogService.delete(id);
+    const ids = Array.from(this.selectedIds);
+    const count = ids.length;
+    if (count === 0) return;
+
+    this.isBatchDeleting = true;
+    let completed = 0;
+
+    ids.forEach(id => {
+      this.catalogService.delete(id).subscribe({
+        next: () => {
+          completed++;
+          if (completed === count) {
+            this.finishBatchDelete(count);
+          }
+        },
+        error: (err) => {
+          console.error(`Error al eliminar producto #${id}:`, err);
+          completed++;
+          if (completed === count) {
+            this.finishBatchDelete(count);
+          }
+        }
       });
-      this.toast.success(`${count} producto(s) eliminados correctamente`);
-      this.selectedIds.clear();
-      this.showBatchDeleteModal = false;
-    }
+    });
+  }
+
+  private finishBatchDelete(count: number) {
+    this.isBatchDeleting = false;
+    this.toast.success(`${count} producto(s) eliminados correctamente`);
+    this.selectedIds.clear();
+    this.showBatchDeleteModal = false;
+    this.catalogService.loadFromServer();
   }
 
   confirmDelete(id: number) {
