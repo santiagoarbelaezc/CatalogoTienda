@@ -1,7 +1,31 @@
 <div class="reports-page animate-fade-in">
 
-  <!-- Header -->
-  <div class="page-header">
+  <!-- ═══ PRINT-ONLY HEADER (Oculto en pantalla, visible solo al imprimir) ════ -->
+  <div class="print-only print-header">
+    <div class="print-header-top">
+      <div class="print-brand">
+        <h2 class="print-title">Tienda Íntima</h2>
+        <span class="print-sep">|</span>
+        <span class="print-subtitle">{{ reportTitle }}</span>
+      </div>
+      <div class="print-meta">
+        <span class="print-code">{{ reportCode }}</span>
+        <span class="print-date">{{ generatedAt }}</span>
+      </div>
+    </div>
+    <div class="print-filter-summary">
+      <span>Categoría: <strong>{{ categoryFilterLabel }}</strong></span>
+      <span class="dot">•</span>
+      <span>Marca: <strong>{{ brandFilterLabel }}</strong></span>
+      <span class="dot">•</span>
+      <span>Estado: <strong>{{ stockFilterLabel }}</strong></span>
+      <span class="dot">•</span>
+      <span>Emitido por: <strong>{{ auth.currentUser?.nombre || 'Admin' }}</strong></span>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN-ONLY HEADER ════════════════════════════════════════════════ -->
+  <div class="page-header no-print">
     <div>
       <h1 class="page-title">Generador de Reportes</h1>
       <p class="page-subtitle">Configura, filtra y descarga informes de tu inventario y catálogo en formato CSV o PDF</p>
@@ -18,7 +42,7 @@
     </div>
   </div>
 
-  <!-- Filters Card -->
+  <!-- ═══ SCREEN-ONLY FILTERS CARD ══════════════════════════════════════════ -->
   <div class="filters-card card no-print">
     <div class="filters-grid">
       <div class="field">
@@ -57,25 +81,25 @@
     </div>
   </div>
 
-  <!-- Summary Pills -->
+  <!-- ═══ SUMMARY PILLS (Screen & Print) ════════════════════════════════════ -->
   <div class="summary-pills">
     <div class="summary-pill card">
-      <span class="pill-label">Total Productos Encontrados</span>
+      <span class="pill-label">Total Referencias</span>
       <span class="pill-value">{{ totalItems }}</span>
     </div>
     <div class="summary-pill card">
-      <span class="pill-label">Unidades Totales en Stock</span>
-      <span class="pill-value">{{ totalStock }} un.</span>
+      <span class="pill-label">Unidades en Stock</span>
+      <span class="pill-value">{{ totalStock | number }} un.</span>
     </div>
-    <div class="summary-pill card">
-      <span class="pill-label">Valor Total del Inventario</span>
+    <div class="summary-pill card highlight">
+      <span class="pill-label">Valor Total Inventario</span>
       <span class="pill-value">$ {{ totalInventoryValue | number }}</span>
     </div>
   </div>
 
-  <!-- Report Data Table -->
+  <!-- ═══ TABLE CARD (Screen & Print) ═══════════════════════════════════════ -->
   <div class="table-card card">
-    <div class="table-header">
+    <div class="table-header no-print">
       <h3 class="section-title">
         {{ reportType === 'stock' ? 'Reporte de Inventario y Stock' : (reportType === 'catalog' ? 'Catálogo General de Productos' : 'Auditoría de Precios') }}
       </h3>
@@ -86,48 +110,57 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>SKU</th>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th>Marca</th>
-            <th>Precio Base</th>
-            <th>Variantes</th>
-            <th>Stock Total</th>
-            <th>Estado</th>
+            <th class="col-sku text-left">SKU</th>
+            <th class="col-name text-left">Producto</th>
+            <th class="col-cat text-left">Categoría</th>
+            <th class="col-brand text-left">Marca</th>
+            <th class="col-price text-right">Precio Base</th>
+            <th class="col-var text-center">Variantes</th>
+            <th class="col-stock text-right">Stock</th>
+            <th class="col-status text-center">Estado</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of rows">
-            <td>
+            <td class="col-sku text-left">
               <span class="sku-text">{{ row.sku }}</span>
             </td>
-            <td>
+            <td class="col-name text-left">
               <span class="prod-name">{{ row.nombre }}</span>
             </td>
-            <td>
+            <td class="col-cat text-left">
               <span class="cat-badge">{{ row.categoria }}</span>
             </td>
-            <td>
+            <td class="col-brand text-left">
               <span class="brand-badge">{{ row.marca }}</span>
             </td>
-            <td>
+            <td class="col-price text-right">
               <span class="price-val">$ {{ row.precioBase | number }}</span>
             </td>
-            <td>
+            <td class="col-var text-center">
               <span class="var-count">{{ row.totalVariantes }} var.</span>
             </td>
-            <td>
+            <td class="col-stock text-right">
               <span class="stock-badge" [class.low]="row.stockTotal < 5">
                 {{ row.stockTotal }} un.
               </span>
             </td>
-            <td>
+            <td class="col-status text-center">
               <span class="status-badge" [class.active]="row.estado === 'Activo'">
                 {{ row.estado }}
               </span>
             </td>
           </tr>
         </tbody>
+        <tfoot *ngIf="rows.length > 0">
+          <tr class="table-summary-row">
+            <td colspan="4" class="summary-label text-right">TOTALES GENERALES:</td>
+            <td class="summary-val text-right">—</td>
+            <td class="summary-val text-center">{{ totalItems }} ref.</td>
+            <td class="summary-val text-right font-bold">{{ totalStock | number }} un.</td>
+            <td class="summary-val text-center font-bold">$ {{ totalInventoryValue | number }}</td>
+          </tr>
+        </tfoot>
       </table>
 
       <!-- Empty state -->
@@ -135,6 +168,20 @@
         <span class="material-symbols-rounded">manage_search</span>
         <p>No se encontraron productos que coincidan con los filtros seleccionados</p>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ PRINT-ONLY SIGNATURES ═════════════════════════════════════════════ -->
+  <div class="print-only print-signatures">
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <span class="signature-name">{{ auth.currentUser?.nombre || 'Administrador' }}</span>
+      <span class="signature-role">Elaborado por</span>
+    </div>
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <span class="signature-name">Gestión de Inventarios</span>
+      <span class="signature-role">Revisado y Aprobado</span>
     </div>
   </div>
 

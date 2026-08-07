@@ -141,15 +141,14 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
       (p.variantes || []).forEach(v => {
         totalVariants++;
         const st = v.stock || 0;
+        const vPrice = (v.precio && v.precio > 0) ? v.precio : (p.precio_base || 0);
         totalStock += st;
-        totalValue += st * (v.precio || p.precio_base || 0);
+        totalValue += st * vPrice;
         if (st < 10) lowStockCount++;
       });
     });
 
-    const avgPrice = totalProd > 0
-      ? this.allProducts.reduce((acc, p) => acc + (p.precio_base || 0), 0) / totalProd
-      : 0;
+    const avgPricePerUnit = totalStock > 0 ? (totalValue / totalStock) : 0;
 
     this.kpis = [
       {
@@ -170,7 +169,7 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
         title: 'Valorización Inventario',
         value: this.formatPrice(totalValue),
         icon: 'payments',
-        trendLabel: `Precio base prom: ${this.formatPrice(avgPrice)}`,
+        trendLabel: totalStock > 0 ? `Valor prom: ${this.formatPrice(avgPricePerUnit)} / ud.` : 'Sin inventario físico',
         isPositive: true
       },
       {

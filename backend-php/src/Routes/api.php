@@ -12,6 +12,7 @@ declare(strict_types=1);
  * @var \App\Routes\Router $router
  */
 
+use App\Controllers\AnalyticsController;
 use App\Controllers\AuthController;
 use App\Controllers\CategoriaController;
 use App\Controllers\ColorController;
@@ -30,6 +31,9 @@ $auth = new AuthMiddleware();
 // ── Health-check ──────────────────────────────────────────────────────────────
 $router->get('/', fn() => Response::success(['status' => 'ok', 'version' => '1.0.0']));
 $router->get('/health', fn() => Response::success(['status' => 'ok', 'timestamp' => date('c')]));
+
+// Event tracking público
+$router->post('/analytics/events', fn() => (new AnalyticsController())->trackEvent());
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Auth
@@ -65,6 +69,9 @@ $router->get('/tallas/{id}',     fn($p) => (new TallaController())->show($p));
 // Admin — Rutas PROTEGIDAS (JWT requerido)
 // ══════════════════════════════════════════════════════════════════════════════
 $router->group('', function (\App\Routes\Router $r) use ($auth) {
+
+    // ── Analíticas ──────────────────────────────────────────────────────────
+    $r->get('/analytics/dashboard', fn() => (new AnalyticsController())->dashboard(), [$auth]);
 
     // ── Productos ──────────────────────────────────────────────────────────
     $r->post('/productos',      fn()  => (new ProductoController())->store(),         [$auth]);

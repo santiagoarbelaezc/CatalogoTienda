@@ -1,25 +1,27 @@
-<div class="product-card animate-scale-in" [class.reverse]="reverseLayout">
+<div class="product-card animate-scale-in">
 
-  <!-- Left Side: Image Gallery -->
+  <!-- Image Gallery Section -->
   <div class="card-gallery">
-    <!-- Main Image -->
     <div class="main-image-wrap">
-      <!-- Tags -->
+      <!-- Minimalist Black Badge -->
       <div class="image-tags">
-        <span class="tag tag-gender">{{ product.genero }}</span>
-        <span class="tag tag-season">{{ product.temporada }}</span>
+        <span class="tag tag-bestseller">MÁS VENDIDO</span>
+        <span class="tag tag-gender" *ngIf="product.genero">{{ product.genero }}</span>
       </div>
+
       <img
         *ngIf="product.imagenes && product.imagenes.length > 0 && product.imagenes[activeImageIndex]"
         [src]="product.imagenes[activeImageIndex].url"
         [alt]="product.nombre"
-        class="main-image group-hover:scale-105">
+        class="main-image">
+
       <div *ngIf="!product.imagenes || product.imagenes.length === 0" class="no-image-placeholder">
         <span class="material-symbols-rounded icon-no-img">image_not_supported</span>
         <span class="text-no-img">Sin imagen</span>
       </div>
     </div>
-    <!-- Thumbnails -->
+
+    <!-- Minimalist Image Thumbnails -->
     <div class="thumbnails" *ngIf="product.imagenes.length > 1">
       <button
         *ngFor="let img of product.imagenes; let idx = index"
@@ -31,39 +33,22 @@
     </div>
   </div>
 
-  <!-- Right Side: Details -->
+  <!-- Content & Details Section -->
   <div class="card-details">
-    <div class="details-top">
+    <div class="details-content">
 
-      <!-- Category / Brand -->
-      <div class="breadcrumb">
-        <span>{{ product.categoria.nombre }}</span>
-        <span class="sep">/</span>
-        <span class="brand">{{ product.marca.nombre }}</span>
+      <!-- Category Tag Kicker -->
+      <div class="kicker-row">
+        <span class="category-kicker">{{ product.categoria.nombre }}</span>
+        <span class="brand-kicker" *ngIf="product.marca">· {{ product.marca.nombre }}</span>
       </div>
 
-      <!-- Name + Price -->
-      <div class="name-price">
-        <h2 class="product-name">{{ product.nombre }}</h2>
-        <div class="price-block">
-          <span class="price-label">Desde</span>
-          <p class="price-value">{{ formatPrice(product.precio_base) }}</p>
-        </div>
-      </div>
+      <!-- Product Name -->
+      <h2 class="product-name">{{ product.nombre }}</h2>
 
-      <p class="product-desc">{{ product.descripcion }}</p>
-
-      <!-- Fabric -->
-      <div class="fabric-chip">
-        <span class="material-symbols-rounded">checkroom</span>
-        <span><strong>Tejido:</strong> {{ product.tela.nombre }} ({{ product.tela.composicion }})</span>
-      </div>
-
-      <!-- Color Selector -->
-      <div class="selector-group">
-        <label class="selector-label">
-          Color: <span class="selector-value">{{ selectedColor?.nombre }}</span>
-        </label>
+      <!-- Color Swatches Row -->
+      <div class="variants-row" *ngIf="availableColors.length > 0">
+        <span class="variants-label">Colores:</span>
         <div class="color-dots">
           <button
             *ngFor="let col of availableColors"
@@ -76,16 +61,14 @@
         </div>
       </div>
 
-      <!-- Talla Selector -->
-      <div class="selector-group">
-        <label class="selector-label">
-          Talla: <span class="selector-value">{{ selectedTalla?.nombre }}</span>
-        </label>
-        <div class="talla-buttons">
+      <!-- Tallas List Row -->
+      <div class="tallas-text-row" *ngIf="availableTallas.length > 0">
+        <span class="variants-label">Tallas:</span>
+        <div class="talla-chips">
           <button
             *ngFor="let t of availableTallas"
             (click)="selectTalla(t)"
-            class="talla-btn"
+            class="talla-chip"
             [class.active]="selectedTalla?.id === t.id"
             [class.disabled]="selectedColor && !hasVariant(selectedColor, t)">
             {{ t.nombre }}
@@ -95,54 +78,27 @@
 
     </div>
 
-    <!-- Bottom: Pricing + Actions -->
-    <div class="details-bottom">
-      <div class="stock-qty-row">
-        <!-- Stock Info -->
-        <div class="stock-info" *ngIf="selectedVariant">
-          <span class="sku-label">SKU: <strong>{{ selectedVariant.sku }}</strong></span>
-          <div class="stock-badge" [class.low]="currentStock > 0 && currentStock <= 10" [class.empty]="currentStock === 0">
-            <span class="stock-dot"></span>
-            {{ currentStock === 0 ? 'Agotado' : (currentStock <= 10 ? 'Pocas unidades (' + currentStock + ')' : 'En Stock (' + currentStock + ')') }}
-          </div>
-        </div>
-        <span *ngIf="!selectedVariant" class="no-variant">Combinación no disponible</span>
+    <!-- Divider Line -->
+    <div class="card-divider"></div>
 
-        <!-- Quantity -->
-        <div class="qty-control" *ngIf="selectedVariant && currentStock > 0">
-          <button (click)="decrementQty()" [disabled]="quantity <= 1" class="qty-btn">−</button>
-          <span class="qty-val">{{ quantity }}</span>
-          <button (click)="incrementQty()" [disabled]="quantity >= currentStock" class="qty-btn">+</button>
-        </div>
-      </div>
-
-      <!-- Price Total -->
-      <div class="price-total" *ngIf="selectedVariant && currentStock > 0">
-        <span class="total-label">Total a Cotizar:</span>
-        <div class="total-price">
-          <span class="total-calc">{{ quantity }} × {{ formatPrice(currentPrice) }} =</span>
-          <span class="total-val">{{ formatPrice(totalPrice) }}</span>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="action-row">
-        <button
-          (click)="sendWhatsAppDirect()"
-          [disabled]="!selectedVariant || currentStock === 0"
-          class="btn-whatsapp">
-          <span class="material-symbols-rounded">chat</span>
-          Consultar por WhatsApp
-        </button>
-        <button
-          (click)="emitAddInquiry()"
-          [disabled]="!selectedVariant || currentStock === 0"
-          class="btn-add">
-          <span class="material-symbols-rounded">add_shopping_cart</span>
-          Agregar a Cotización
-        </button>
+    <!-- Footer: Price -->
+    <div class="card-footer-row">
+      <div class="price-display">
+        <span class="price-label-prefix">Precio:</span>
+        <span class="price-val">{{ formatPrice(currentPrice > 0 ? currentPrice : product.precio_base) }}</span>
       </div>
     </div>
+
+    <!-- Action Button -->
+    <div class="action-row">
+      <button
+        (click)="sendWhatsAppDirect()"
+        class="btn-whatsapp">
+        <span class="material-symbols-rounded">chat</span>
+        Consultar por WhatsApp
+      </button>
+    </div>
+
   </div>
 
 </div>

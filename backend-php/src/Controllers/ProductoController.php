@@ -129,8 +129,16 @@ final class ProductoController extends BaseController
                     $varianteModel->update($vId, $vData);
                     $sentIds[] = $vId;
                 } else {
-                    $newId = $varianteModel->create($vData);
-                    $sentIds[] = $newId;
+                    // Si el SKU ya existe en este mismo producto, actualizar esa variante
+                    $existingBySku = $varianteModel->findBySku($vData['sku']);
+                    if ($existingBySku && (int) $existingBySku['id_producto'] === $id) {
+                        $skuId = (int) $existingBySku['id'];
+                        $varianteModel->update($skuId, $vData);
+                        $sentIds[] = $skuId;
+                    } else {
+                        $newId = $varianteModel->create($vData);
+                        $sentIds[] = $newId;
+                    }
                 }
             }
 

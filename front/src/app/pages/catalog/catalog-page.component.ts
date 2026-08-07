@@ -10,12 +10,13 @@ import { CatalogService } from '../../core/catalog.service';
 interface HeroImageItem {
   img: string;
   img2: string;
-  title: string;
+  kicker: string;
+  titleLine1: string;
+  titleLine2: string;
   subtitle: string;
   description: string;
-  promoTag: string;
-  promoText: string;
-  promoIcon: 'shipping' | 'discount' | 'gift';
+  promoBadgeLabel: string;
+  promoBadgeText: string;
   link: string;
   ctaText: string;
 }
@@ -32,40 +33,43 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly items: HeroImageItem[] = [
     {
-      img: 'assets/images/pijamas-hero.png',
-      img2: 'assets/images/pijamas-hero-2.png',
-      title: 'Noches de Satén',
-      subtitle: 'Siluetas fluidas y sofisticadas.',
-      description: 'Lujo sutil y máxima suavidad para tus momentos de descanso. Diseños delicados creados en satén premium que acarician tu piel.',
-      promoTag: 'EDICIÓN EXCLUSIVA',
-      promoText: 'Envío gratis por compras superiores a $150.000',
-      promoIcon: 'shipping',
+      img: 'assets/images/hero/hero_pijamas_1.png',
+      img2: 'assets/images/hero/hero_pijamas_2.png',
+      kicker: 'COLECCIÓN HOGAR & PIJAMAS',
+      titleLine1: 'MOMENTO DE',
+      titleLine2: 'DESCANSO',
+      subtitle: 'Suavidad y calidez para tu hogar.',
+      description: 'Disfruta tus mañanas y noches con nuestras pijamas de algodón nublado y satén. Diseñadas para abrazar tu tranquilidad y bienestar en familia.',
+      promoBadgeLabel: 'ENVÍO',
+      promoBadgeText: 'Envío gratis a toda Colombia en pedidos mayores a $150.000',
       link: '/',
-      ctaText: 'Explorar Colección'
+      ctaText: 'VER PIJAMAS'
     },
     {
-      img: 'assets/images/ropa-interior-hero.png',
-      img2: 'assets/images/ropa-interior-hero-2.png',
-      title: 'Encaje Premium',
+      img: 'assets/images/hero/hero_interior_1.png',
+      img2: 'assets/images/hero/hero_interior_2.png',
+      kicker: 'COLECCIÓN ÍNTIMA',
+      titleLine1: 'ENCAJE &',
+      titleLine2: 'ELEGANCIA',
       subtitle: 'Detalles delicados y texturas suaves.',
       description: 'Siente la comodidad y ligereza del encaje de alta gama con diseños femeninos, versátiles y un ajuste impecable para tu día a día.',
-      promoTag: 'NUEVA COLECCIÓN',
-      promoText: '10% OFF extra en tu primer pedido con el código INTTIMA10',
-      promoIcon: 'discount',
+      promoBadgeLabel: 'PROMO',
+      promoBadgeText: '10% OFF extra en tu primer pedido con el código INTIMA10',
       link: '/',
-      ctaText: 'Ver Diseños'
+      ctaText: 'VER ROPA INTERIOR'
     },
     {
-      img: 'assets/images/novedades-hero-2.png',
-      img2: 'assets/images/novedades-hero.png',
-      title: 'Detalles Únicos',
+      img: 'assets/images/hero/hero_novedades_1.png',
+      img2: 'assets/images/hero/hero_novedades_2.png',
+      kicker: 'NUEVA TEMPORADA 2026',
+      titleLine1: 'NOVEDADES DE',
+      titleLine2: 'TEMPORADA',
       subtitle: 'La armonía perfecta de sofisticación y comodidad.',
       description: 'Descubre piezas exclusivas confeccionadas con texturas selectas y acabados limpios que elevan tu armario de descanso.',
-      promoTag: 'NOVEDADES EXCLUSIVAS',
-      promoText: 'Empaque de lujo de cortesía en todas tus compras',
-      promoIcon: 'gift',
+      promoBadgeLabel: 'DETALLE',
+      promoBadgeText: 'Empaque de lujo de cortesía en todas tus compras',
       link: '/',
-      ctaText: 'Ver Novedades'
+      ctaText: 'VER NOVEDADES'
     }
   ];
 
@@ -184,9 +188,6 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
 
   handleAddToInquiry(event: { product: Producto; variant: Variante; quantity: number }) {
     const existingIndex = this.inquiryItems.findIndex(item => item.variant.id === event.variant.id);
@@ -200,6 +201,40 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
   handleRemoveItem(index: number) { this.inquiryItems.splice(index, 1); }
   handleClearAll() { this.inquiryItems = []; }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  scrollToCatalog(): void {
+    const catalogEl = document.getElementById('catalog-section');
+    if (catalogEl) {
+      catalogEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  filterByCategory(categoryQuery: string): void {
+    if (this.activeFilters) {
+      this.activeFilters.searchQuery = categoryQuery;
+      this.handleFiltersChanged(this.activeFilters);
+    }
+    this.scrollToCatalog();
+  }
+
+  filterByGender(gender: string): void {
+    if (this.activeFilters) {
+      this.activeFilters.genero = gender;
+      this.handleFiltersChanged(this.activeFilters);
+    }
+    this.scrollToCatalog();
+  }
+
+  openCart(): void {
+    const cartEl = document.querySelector('app-cart-inquiry');
+    if (cartEl) {
+      cartEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 
   private syncCurrentSlide(): void {
     const container = this.scrollContainer?.nativeElement;

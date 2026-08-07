@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Producto, Variante, Color, Talla } from '../../models/catalog.models';
+import { AnalyticsService } from '../../core/analytics.service';
 
 @Component({
   selector: 'app-product-card',
@@ -24,6 +25,8 @@ export class ProductCardComponent implements OnInit {
 
   availableColors: Color[] = [];
   availableTallas: Talla[] = [];
+
+  constructor(private analyticsService: AnalyticsService) {}
 
   ngOnInit() {
     this.extractUniqueOptions();
@@ -78,14 +81,26 @@ export class ProductCardComponent implements OnInit {
   decrementQty() { if (this.quantity > 1) this.quantity--; }
 
   sendWhatsAppDirect() {
-    if (!this.selectedVariant) return;
-    const message = `Hola, me interesa:\n*${this.product.nombre}*\n- SKU: ${this.selectedVariant.sku}\n- Color: ${this.selectedVariant.color.nombre}\n- Talla: ${this.selectedVariant.talla.nombre}\n- Cantidad: ${this.quantity}\n- Total: ${this.formatPrice(this.totalPrice)}`;
+    // Registrar evento de analítica en el backend
+    this.analyticsService.trackEvent(this.product.id, this.selectedVariant?.id).subscribe();
+
+    const variantInfo = this.selectedVariant
+      ? `\n- Color: ${this.selectedVariant.color.nombre}\n- Talla: ${this.selectedVariant.talla.nombre}`
+      : '';
+    const price = this.formatPrice(this.currentPrice);
+    const message = `Hola, me interesa consultar sobre:\n*${this.product.nombre}*${variantInfo}\n- Precio: ${price}`;
     window.open(`https://wa.me/573000000000?text=${encodeURIComponent(message)}`, '_blank');
   }
 
   emitAddInquiry() {
-    if (this.selectedVariant && this.selectedVariant.stock > 0) {
-      this.addToInquiry.emit({ product: this.product, variant: this.selectedVariant, quantity: this.quantity });
-    }
+    const variantToEmit = this.selectedVariant || (this.product.variantes && this.product.variantes[0]) || {
+      id: 0,
+      sku: 'STD',
+      precio: this.product.precio_base,
+      stock: 99,
+      color: { id: 0, nombre: 'Único', hex: '#000000' },
+      talla: { id: 0, nombre: 'Única' }
+    };
+    this.addToInquiry.emit({ product: this.product, variant: variantToEmit, quantity: 1 });
   }
 }

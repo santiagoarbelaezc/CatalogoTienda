@@ -118,6 +118,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     this.telaId = p.tela.id;
     this.existingImages = p.imagenes || [];
     this.variantes = p.variantes.map(v => ({
+      id: v.id,
       sku: v.sku,
       precio: v.precio,
       stock: v.stock,

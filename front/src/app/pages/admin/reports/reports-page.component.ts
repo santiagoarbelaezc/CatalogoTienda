@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CatalogService } from '../../../core/catalog.service';
 import { CategoriesService } from '../../../core/categories.service';
 import { BrandsService } from '../../../core/brands.service';
+import { AuthService } from '../../../auth/auth.service';
 import { Producto, Categoria, Marca } from '../../../models/catalog.models';
 
 interface ReportRow {
@@ -40,11 +41,13 @@ export class ReportsPageComponent implements OnInit {
   totalItems = 0;
   totalStock = 0;
   totalInventoryValue = 0;
+  generatedAt: string = '';
 
   constructor(
     private catalogService: CatalogService,
     private categoriesService: CategoriesService,
-    private brandsService: BrandsService
+    private brandsService: BrandsService,
+    public auth: AuthService
   ) {}
 
   ngOnInit() {
@@ -57,6 +60,11 @@ export class ReportsPageComponent implements OnInit {
   }
 
   generateReport() {
+    this.generatedAt = new Date().toLocaleString('es-CO', {
+      dateStyle: 'long',
+      timeStyle: 'short'
+    });
+
     let filtered = this.products;
 
     if (this.categoryFilter !== null && +this.categoryFilter !== 0) {
@@ -74,8 +82,11 @@ export class ReportsPageComponent implements OnInit {
     let totVal = 0;
 
     filtered.forEach(p => {
-      const pStock = p.variantes.reduce((acc, v) => acc + v.stock, 0);
-      const pVal = p.variantes.reduce((acc, v) => acc + (v.stock * v.precio), 0);
+      const pStock = (p.variantes || []).reduce((acc, v) => acc + (v.stock || 0), 0);
+      const pVal = (p.variantes || []).reduce((acc, v) => {
+        const vPrice = (v.precio && v.precio > 0) ? v.precio : (p.precio_base || 0);
+        return acc + ((v.stock || 0) * vPrice);
+      }, 0);
 
       if (this.stockFilter === 'low' && pStock >= 5) {
         return; // skip if not low stock
@@ -101,6 +112,40 @@ export class ReportsPageComponent implements OnInit {
     this.totalItems = newRows.length;
     this.totalStock = totStock;
     this.totalInventoryValue = totVal;
+  }
+
+  get reportTitle(): string {
+    switch (this.reportType) {
+      case 'stock': return 'INFORME TÉCNICO DE INVENTARIO Y STOCK GENERAL';
+      case 'catalog': return 'CATÁLOGO MAESTRO Y LISTADO GENERAL DE PRODUCTOS';
+      case 'pricing': return 'AUDITORÍA DE PRECIOS, MARCADORES Y VARIANTES';
+    }
+  }
+
+  get categoryFilterLabel(): string {
+    if (!this.categoryFilter) return 'Todas las categorías';
+    const found = this.categories.find(c => c.id === +this.categoryFilter!);
+    return found ? found.nombre : 'Todas las categorías';
+  }
+
+  get brandFilterLabel(): string {
+    if (!this.brandFilter) return 'Todas las marcas';
+    const found = this.brands.find(m => m.id === +this.brandFilter!);
+    return found ? found.nombre : 'Todas las marcas';
+  }
+
+  get stockFilterLabel(): string {
+    switch (this.stockFilter) {
+      case 'all': return 'Todos los estados';
+      case 'active': return 'Solo productos activos';
+      case 'low': return 'Crítico (Bajo stock < 5 un.)';
+    }
+  }
+
+  get reportCode(): string {
+    const typeCode = this.reportType.toUpperCase();
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `DOC-REP-${typeCode}-${dateStr}`;
   }
 
   exportCSV() {

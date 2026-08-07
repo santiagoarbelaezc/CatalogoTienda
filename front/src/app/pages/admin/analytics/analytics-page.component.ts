@@ -2,30 +2,11 @@ import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy } fr
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CatalogService } from '../../../core/catalog.service';
-import { CategoriesService } from '../../../core/categories.service';
+import { AnalyticsService, AnalyticKpi, TopVariantMetric } from '../../../core/analytics.service';
 import { Producto } from '../../../models/catalog.models';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
-
-interface AnalyticKpi {
-  title: string;
-  value: string;
-  icon: string;
-  trend: number;
-  trendLabel: string;
-}
-
-interface TopVariantMetric {
-  productoNombre: string;
-  sku: string;
-  colorHex: string;
-  colorNombre: string;
-  talla: string;
-  inquiries: number;
-  conversion: string;
-  stock: number;
-}
 
 @Component({
   selector: 'app-analytics-page',
@@ -47,29 +28,59 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
     { title: 'Tasa de Conversión (WA)', value: '18.5%', icon: 'trending_up', trend: 2.4, trendLabel: 'vs semana anterior' },
     { title: 'Cotizaciones Generadas', value: '342', icon: 'chat', trend: 14.2, trendLabel: 'vs semana anterior' },
     { title: 'Tiempo Promedio en Catálogo', value: '4m 15s', icon: 'timer', trend: 8.5, trendLabel: 'vs semana anterior' },
-    { title: 'Valor Promedio Cotizado', value: '$ 285,000', icon: 'paid', trend: -1.2, trendLabel: 'vs semana anterior' }
+    { title: 'Valor Promedio Cotizado', value: '$ 285,000', icon: 'paid', trend: 1.2, trendLabel: 'vs semana anterior' }
   ];
 
   topVariants: TopVariantMetric[] = [];
+  categoryDistributionData: { labels: string[]; data: number[] } = { labels: ['Pijamas', 'Lencería', 'Accesorios'], data: [12, 8, 4] };
+  quotesByDayData: { labels: string[]; data: number[] } = { labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], data: [42, 58, 65, 50, 78, 92, 64] };
 
   constructor(
     private catalogService: CatalogService,
-    private categoriesService: CategoriesService
+    private analyticsService: AnalyticsService
   ) {}
 
   ngOnInit() {
-    this.catalogService.loadFromServer();
-    this.catalogService.products$.subscribe(list => {
-      this.products = list || [];
-      this.generateTopVariants();
-      this.updateKpis();
-      if (this.catChart) {
-        this.updateCatChart();
+    this.loadAnalyticsFromBackend();
+  }
+
+  private loadAnalyticsFromBackend() {
+    this.analyticsService.getDashboardAnalytics().subscribe({
+      next: (res) => {
+        if (res && res.success && res.data) {
+          const d = res.data;
+          if (Array.isArray(d.kpis) && d.kpis.length > 0) {
+            this.kpis = d.kpis;
+          }
+          if (d.categoryDistribution) {
+            this.categoryDistributionData = d.categoryDistribution;
+            this.updateCatChart();
+          }
+          if (d.quotesByDay) {
+            this.quotesByDayData = d.quotesByDay;
+            this.updateWaChart();
+          }
+          if (Array.isArray(d.topVariants)) {
+            this.topVariants = d.topVariants;
+          }
+        }
+      },
+      error: (err) => {
+        console.warn('Backend analytics unaccessible, fallback to catalog calculations:', err);
+        this.catalogService.loadFromServer();
+        this.catalogService.products$.subscribe(list => {
+          this.products = list || [];
+          this.generateFallbackTopVariants();
+          this.updateFallbackKpis();
+          if (this.catChart) {
+            this.updateCatChart();
+          }
+        });
       }
     });
   }
 
-  private updateKpis() {
+  private updateFallbackKpis() {
     const totalProd = this.products.length;
     let totalStock = 0;
     let variantPriceSum = 0;
@@ -118,11 +129,10 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
     this.waChart?.destroy();
   }
 
-  private generateTopVariants() {
+  private generateFallbackTopVariants() {
     const list: TopVariantMetric[] = [];
     this.products.forEach(p => {
       p.variantes.forEach(v => {
-        // Generate pseudo-random deterministic metrics based on sku length/id
         const inq = Math.floor((v.precio % 50) + 12);
         list.push({
           productoNombre: p.nombre,
@@ -142,14 +152,13 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
 
   private initCatChart() {
     if (!this.catChartCanvas) return;
-    const { labels, data } = this.getCategoryDistribution();
 
     this.catChart = new Chart(this.catChartCanvas.nativeElement, {
       type: 'doughnut',
       data: {
-        labels,
+        labels: this.categoryDistributionData.labels,
         datasets: [{
-          data,
+          data: this.categoryDistributionData.data,
           backgroundColor: ['#111111', '#4b5563', '#9ca3af', '#d1d5db', '#e5e7eb'],
           borderWidth: 2,
           borderColor: '#ffffff'
@@ -174,39 +183,26 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private updateCatChart() {
-    if (!this.catChart) return;
-    const { labels, data } = this.getCategoryDistribution();
-    this.catChart.data.labels = labels;
-    this.catChart.data.datasets[0].data = data;
-    this.catChart.update();
-  }
-
-  private getCategoryDistribution() {
-    const counts: { [key: string]: number } = {};
-    this.products.forEach(p => {
-      const catName = p.categoria.nombre || 'General';
-      counts[catName] = (counts[catName] || 0) + 1;
-    });
-    const labels = Object.keys(counts);
-    const data = Object.values(counts);
-    if (labels.length === 0) {
-      return { labels: ['Sin Datos'], data: [1] };
+    if (!this.catChart || !this.catChart.ctx) return;
+    try {
+      this.catChart.data.labels = this.categoryDistributionData.labels;
+      this.catChart.data.datasets[0].data = this.categoryDistributionData.data;
+      this.catChart.update();
+    } catch {
+      // Ignorar si el canvas se ha desmontado de la vista
     }
-    return { labels, data };
   }
 
   private initWaChart() {
     if (!this.waChartCanvas) return;
-    const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const quotesData = [42, 58, 65, 50, 78, 92, 64];
 
     this.waChart = new Chart(this.waChartCanvas.nativeElement, {
       type: 'bar',
       data: {
-        labels: days,
+        labels: this.quotesByDayData.labels,
         datasets: [{
           label: 'Cotizaciones WhatsApp',
-          data: quotesData,
+          data: this.quotesByDayData.data,
           backgroundColor: '#111111',
           borderRadius: 6,
           borderSkipped: false
@@ -234,5 +230,16 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
         }
       }
     });
+  }
+
+  private updateWaChart() {
+    if (!this.waChart || !this.waChart.ctx) return;
+    try {
+      this.waChart.data.labels = this.quotesByDayData.labels;
+      this.waChart.data.datasets[0].data = this.quotesByDayData.data;
+      this.waChart.update();
+    } catch {
+      // Ignorar si el canvas se ha desmontado de la vista
+    }
   }
 }

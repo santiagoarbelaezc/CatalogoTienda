@@ -68,12 +68,20 @@
             <span class="material-symbols-rounded input-icon">lock</span>
             <input
               id="login-password"
-              type="password"
+              [type]="showPassword ? 'text' : 'password'"
               name="password"
               [(ngModel)]="password"
-              class="form-input"
+              class="form-input form-input--password"
               placeholder="••••••••"
               required>
+            <button
+              type="button"
+              class="toggle-password-btn"
+              (click)="togglePasswordVisibility()"
+              [title]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <span class="material-symbols-rounded">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+            </button>
           </div>
         </div>
 

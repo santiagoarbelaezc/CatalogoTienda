@@ -15,34 +15,41 @@
   <!-- Header -->
   <header class="print-header">
     <div class="brand">
-      <div class="brand-icon">CT</div>
+      <div class="brand-icon">
+        <span class="material-symbols-rounded">style</span>
+      </div>
       <div class="brand-text">
         <h1>Catálogo de Productos</h1>
-        <span>Tienda Íntima</span>
+        <span class="sub">Tienda Íntima • Colección Oficial</span>
       </div>
     </div>
     <div class="meta-info">
-      <p>Generado el: {{ today | date:'mediumDate' }}</p>
-      <p>Total Productos: {{ products.length }}</p>
+      <span class="meta-badge">Emisión: {{ today | date:'dd/MM/yyyy' }}</span>
+      <span class="meta-badge highlight">{{ products.length }} Referencias</span>
     </div>
   </header>
 
   <!-- Products Grid -->
   <div class="print-products">
-    <div class="product-item" *ngFor="let product of products">
-      <div class="product-image">
-        <img *ngIf="product.imagenes?.length" [src]="product.imagenes[0].url" [alt]="product.nombre">
-        <div *ngIf="!product.imagenes?.length" class="no-img">Sin imagen</div>
-      </div>
-      <div class="product-info">
-        <div class="cats">
-          <span>{{ product.categoria.nombre }}</span> / <span>{{ product.marca.nombre }}</span>
+    <div class="product-card" *ngFor="let product of products">
+      <div class="product-image-wrap">
+        <img *ngIf="product.imagenes?.length" [src]="product.imagenes[0].url" [alt]="product.nombre" class="product-img">
+        <div *ngIf="!product.imagenes?.length" class="no-img">
+          <span class="material-symbols-rounded">image</span>
+          <span>Sin imagen</span>
         </div>
-        <h2 class="name">{{ product.nombre }}</h2>
-        <div class="details">
-          <p class="desc">{{ product.descripcion }}</p>
-          <p class="sku">SKU base: {{ product.variantes[0] ? product.variantes[0].sku : 'N/A' }}</p>
-          <div class="price">{{ formatPrice(product.precio_base) }}</div>
+      </div>
+      <div class="product-body">
+        <div class="product-tags">
+          <span class="tag-cat">{{ product.categoria.nombre }}</span>
+          <span class="tag-sep">•</span>
+          <span class="tag-brand">{{ product.marca.nombre }}</span>
+        </div>
+        <h2 class="product-title">{{ product.nombre }}</h2>
+        <p class="product-desc" *ngIf="product.descripcion">{{ product.descripcion }}</p>
+        <div class="product-footer">
+          <span class="product-price">{{ formatPrice(product.precio_base) }}</span>
+          <span class="product-sku">SKU: {{ product.variantes[0] ? product.variantes[0].sku : 'PRD-' + product.id }}</span>
         </div>
       </div>
     </div>
@@ -50,7 +57,7 @@
 
   <!-- Footer -->
   <footer class="print-footer">
-    <p>Catálogo Tienda Íntima &copy; {{ today | date:'yyyy' }}. Todos los derechos reservados.</p>
+    <p>Documento oficial de catálogo • Tienda Íntima © {{ today | date:'yyyy' }}. Todos los derechos reservados.</p>
   </footer>
 
 </div>

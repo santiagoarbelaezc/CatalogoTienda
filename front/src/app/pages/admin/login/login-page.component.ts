@@ -22,10 +22,15 @@ export class LoginPageComponent {
   
   email = '';
   password = '';
+  showPassword = false;
   isLoading = false;
   errorMessage = '';
 
   constructor(private auth: AuthService, private router: Router) {}
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   onLogin(event?: Event) {
     if (event) {
