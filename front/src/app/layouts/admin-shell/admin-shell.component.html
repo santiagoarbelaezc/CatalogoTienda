@@ -4,14 +4,14 @@
   <nav class="sidebar">
     <!-- Brand -->
     <div class="sidebar-brand">
-      <div class="brand-icon">
+      <div class="brand-icon" *ngIf="!isSidebarCollapsed">
         <span class="material-symbols-rounded">style</span>
       </div>
       <div class="brand-text" *ngIf="!isSidebarCollapsed">
         <span class="brand-title">Catálogo</span>
         <span class="brand-sub">Tienda Íntima</span>
       </div>
-      <button class="collapse-btn" (click)="toggleSidebar()" id="sidebar-toggle">
+      <button class="collapse-btn" (click)="toggleSidebar()" id="sidebar-toggle" [title]="isSidebarCollapsed ? 'Desplegar menú' : 'Colapsar menú'">
         <span class="material-symbols-rounded">
           {{ isSidebarCollapsed ? 'chevron_right' : 'chevron_left' }}
         </span>
@@ -47,6 +47,9 @@
     <!-- Topbar -->
     <header class="topbar">
       <div class="topbar-left">
+        <button type="button" class="btn-menu-toggle" (click)="toggleSidebar()" [title]="isSidebarCollapsed ? 'Desplegar menú' : 'Colapsar menú'">
+          <span class="material-symbols-rounded">{{ isSidebarCollapsed ? 'menu' : 'menu_open' }}</span>
+        </button>
         <span class="live-dot"></span>
         <span class="topbar-label">Panel de Administración en Vivo</span>
       </div>
