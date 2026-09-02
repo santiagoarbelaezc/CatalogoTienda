@@ -2,7 +2,7 @@ import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, OnDestroy } fr
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CatalogService } from '../../../core/catalog.service';
-import { AnalyticsService, AnalyticKpi, TopVariantMetric } from '../../../core/analytics.service';
+import { AnalyticsService, AnalyticKpi, TopVariantMetric, ChartDistribution, CategorySummaryItem, BrandSummaryItem } from '../../../core/analytics.service';
 import { Producto } from '../../../models/catalog.models';
 import { Chart, registerables } from 'chart.js';
 
@@ -16,24 +16,25 @@ Chart.register(...registerables);
   styleUrls: ['./analytics-page.component.scss']
 })
 export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('catChart') catChartCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('distChart') distChartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('waChart') waChartCanvas!: ElementRef<HTMLCanvasElement>;
 
-  private catChart: Chart | null = null;
+  private distChart: Chart | null = null;
   private waChart: Chart | null = null;
 
-  products: Producto[] = [];
+  isLoading = true;
+  distributionMode: 'category' | 'brand' | 'gender' = 'category';
 
-  kpis: AnalyticKpi[] = [
-    { title: 'Tasa de Conversión (WA)', value: '18.5%', icon: 'trending_up', trend: 2.4, trendLabel: 'vs semana anterior' },
-    { title: 'Cotizaciones Generadas', value: '342', icon: 'chat', trend: 14.2, trendLabel: 'vs semana anterior' },
-    { title: 'Tiempo Promedio en Catálogo', value: '4m 15s', icon: 'timer', trend: 8.5, trendLabel: 'vs semana anterior' },
-    { title: 'Valor Promedio Cotizado', value: '$ 285,000', icon: 'paid', trend: 1.2, trendLabel: 'vs semana anterior' }
-  ];
-
+  kpis: AnalyticKpi[] = [];
   topVariants: TopVariantMetric[] = [];
-  categoryDistributionData: { labels: string[]; data: number[] } = { labels: ['Pijamas', 'Lencería', 'Accesorios'], data: [12, 8, 4] };
-  quotesByDayData: { labels: string[]; data: number[] } = { labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], data: [42, 58, 65, 50, 78, 92, 64] };
+
+  categoryDistribution: ChartDistribution = { labels: [], data: [] };
+  brandDistribution: ChartDistribution = { labels: [], data: [] };
+  genderDistribution: ChartDistribution = { labels: [], data: [] };
+  quotesByDayData: ChartDistribution = { labels: [], data: [] };
+
+  categorySummaries: CategorySummaryItem[] = [];
+  brandSummaries: BrandSummaryItem[] = [];
 
   constructor(
     private catalogService: CatalogService,
@@ -44,122 +45,173 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
     this.loadAnalyticsFromBackend();
   }
 
-  private loadAnalyticsFromBackend() {
+  loadAnalyticsFromBackend() {
+    this.isLoading = true;
     this.analyticsService.getDashboardAnalytics().subscribe({
       next: (res) => {
+        this.isLoading = false;
         if (res && res.success && res.data) {
           const d = res.data;
-          if (Array.isArray(d.kpis) && d.kpis.length > 0) {
-            this.kpis = d.kpis;
+          this.kpis = d.kpis || [];
+          this.categoryDistribution = d.categoryDistribution || { labels: [], data: [] };
+          this.brandDistribution = d.brandDistribution || { labels: [], data: [] };
+          this.genderDistribution = d.genderDistribution || { labels: [], data: [] };
+          this.quotesByDayData = d.quotesByDay || { labels: [], data: [] };
+          this.topVariants = d.topVariants || [];
+
+          if (d.catalogSummary) {
+            this.categorySummaries = d.catalogSummary.categories || [];
+            this.brandSummaries = d.catalogSummary.brands || [];
           }
-          if (d.categoryDistribution) {
-            this.categoryDistributionData = d.categoryDistribution;
-            this.updateCatChart();
-          }
-          if (d.quotesByDay) {
-            this.quotesByDayData = d.quotesByDay;
-            this.updateWaChart();
-          }
-          if (Array.isArray(d.topVariants)) {
-            this.topVariants = d.topVariants;
-          }
+
+          this.updateDistChart();
+          this.updateWaChart();
         }
       },
       error: (err) => {
-        console.warn('Backend analytics unaccessible, fallback to catalog calculations:', err);
-        this.catalogService.loadFromServer();
+        console.warn('Backend analytics unaccessible, calculating from local catalog:', err);
+        this.isLoading = false;
         this.catalogService.products$.subscribe(list => {
-          this.products = list || [];
-          this.generateFallbackTopVariants();
-          this.updateFallbackKpis();
-          if (this.catChart) {
-            this.updateCatChart();
-          }
+          this.computeLocalAnalytics(list || []);
         });
       }
     });
   }
 
-  private updateFallbackKpis() {
-    const totalProd = this.products.length;
+  setDistributionMode(mode: 'category' | 'brand' | 'gender') {
+    this.distributionMode = mode;
+    this.updateDistChart();
+  }
+
+  private computeLocalAnalytics(products: Producto[]) {
+    const totalProd = products.length;
+    let activeProd = 0;
     let totalStock = 0;
-    let variantPriceSum = 0;
+    let totalValue = 0;
+    let lowStock = 0;
     let variantCount = 0;
 
-    this.products.forEach(p => {
+    const catMap = new Map<string, number>();
+    const brandMap = new Map<string, number>();
+    const genderMap = new Map<string, number>();
+
+    products.forEach(p => {
+      if (p.activo) activeProd++;
+      const catName = p.categoria?.nombre || 'Sin Categoría';
+      catMap.set(catName, (catMap.get(catName) || 0) + 1);
+
+      const brandName = p.marca?.nombre || 'Sin Marca';
+      brandMap.set(brandName, (brandMap.get(brandName) || 0) + 1);
+
+      const gender = p.genero || 'Sin Definir';
+      genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
+
       (p.variantes || []).forEach(v => {
-        totalStock += (v.stock || 0);
-        variantPriceSum += (v.precio || p.precio_base || 0);
         variantCount++;
+        const s = v.stock || 0;
+        const pr = v.precio && v.precio > 0 ? v.precio : (p.precio_base || 0);
+        totalStock += s;
+        totalValue += (s * pr);
+        if (s <= 5) lowStock++;
       });
     });
 
-    const avgPrice = totalProd > 0
-      ? this.products.reduce((acc, p) => acc + (p.precio_base || 0), 0) / totalProd
-      : 0;
+    this.categoryDistribution = {
+      labels: Array.from(catMap.keys()),
+      data: Array.from(catMap.values())
+    };
 
-    const avgVariantPrice = variantCount > 0 ? (variantPriceSum / variantCount) : avgPrice;
+    this.brandDistribution = {
+      labels: Array.from(brandMap.keys()),
+      data: Array.from(brandMap.values())
+    };
+
+    this.genderDistribution = {
+      labels: Array.from(genderMap.keys()),
+      data: Array.from(genderMap.values())
+    };
 
     this.kpis = [
-      { title: 'Tasa de Conversión (WA)', value: '18.5%', icon: 'trending_up', trend: 2.4, trendLabel: 'vs semana anterior' },
-      { title: 'Cotizaciones Generadas', value: `${Math.round(totalStock * 1.5 || 342)}`, icon: 'chat', trend: 14.2, trendLabel: 'vs semana anterior' },
-      { title: 'Tiempo Promedio en Catálogo', value: '4m 15s', icon: 'timer', trend: 8.5, trendLabel: 'vs semana anterior' },
-      { title: 'Valor Promedio Cotizado', value: this.formatPrice(avgVariantPrice), icon: 'paid', trend: 1.2, trendLabel: 'vs semana anterior' }
+      {
+        title: 'Total Productos en Catálogo',
+        value: `${totalProd}`,
+        icon: 'inventory_2',
+        trend: totalProd > 0 ? Math.round((activeProd / totalProd) * 100) : 0,
+        trendLabel: `${activeProd} activos en tienda`
+      },
+      {
+        title: 'Valorización del Inventario',
+        value: this.formatCurrency(totalValue),
+        icon: 'paid',
+        trend: variantCount,
+        trendLabel: `en ${variantCount} variantes`
+      },
+      {
+        title: 'Existencias Totales (Stock)',
+        value: `${totalStock}`,
+        icon: 'stacked_bar_chart',
+        trend: lowStock > 0 ? -lowStock : 0,
+        trendLabel: lowStock > 0 ? `${lowStock} variantes bajo stock` : 'Stock saludable'
+      },
+      {
+        title: 'Cotizaciones WhatsApp',
+        value: '0',
+        icon: 'chat',
+        trend: 0,
+        trendLabel: 'Sin eventos registrados'
+      }
     ];
+
+    this.updateDistChart();
+    this.updateWaChart();
   }
 
-  private formatPrice(val: number): string {
+  formatCurrency(val: number): string {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(val).replace('COP', '').trim();
+    }).format(val).replace('COP', '$').trim();
   }
 
   ngAfterViewInit() {
     setTimeout(() => {
-      this.initCatChart();
+      this.initDistChart();
       this.initWaChart();
-    }, 50);
+    }, 100);
   }
 
   ngOnDestroy() {
-    this.catChart?.destroy();
+    this.distChart?.destroy();
     this.waChart?.destroy();
   }
 
-  private generateFallbackTopVariants() {
-    const list: TopVariantMetric[] = [];
-    this.products.forEach(p => {
-      p.variantes.forEach(v => {
-        const inq = Math.floor((v.precio % 50) + 12);
-        list.push({
-          productoNombre: p.nombre,
-          sku: v.sku,
-          colorHex: v.color.hex,
-          colorNombre: v.color.nombre,
-          talla: v.talla.nombre,
-          inquiries: inq,
-          conversion: `${Math.min(32, Math.max(12, Math.floor(inq * 0.4)))}%`,
-          stock: v.stock
-        });
-      });
-    });
-    list.sort((a, b) => b.inquiries - a.inquiries);
-    this.topVariants = list.slice(0, 6);
+  private getCurrentDistributionData(): ChartDistribution {
+    if (this.distributionMode === 'brand') return this.brandDistribution;
+    if (this.distributionMode === 'gender') return this.genderDistribution;
+    return this.categoryDistribution;
   }
 
-  private initCatChart() {
-    if (!this.catChartCanvas) return;
+  private initDistChart() {
+    if (!this.distChartCanvas?.nativeElement) return;
+    const ctx = this.distChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
 
-    this.catChart = new Chart(this.catChartCanvas.nativeElement, {
+    const dataObj = this.getCurrentDistributionData();
+    const colors = [
+      '#111111', '#4b5563', '#9ca3af', '#d1d5db',
+      '#eac7d2', '#c59b27', '#2563eb', '#10b981',
+      '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'
+    ];
+
+    this.distChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: this.categoryDistributionData.labels,
+        labels: dataObj.labels.length ? dataObj.labels : ['Sin datos'],
         datasets: [{
-          data: this.categoryDistributionData.data,
-          backgroundColor: ['#111111', '#4b5563', '#9ca3af', '#d1d5db', '#e5e7eb'],
+          data: dataObj.data.length ? dataObj.data : [1],
+          backgroundColor: colors.slice(0, Math.max(1, dataObj.labels.length)),
           borderWidth: 2,
           borderColor: '#ffffff'
         }]
@@ -167,43 +219,54 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '70%',
         plugins: {
-          legend: { position: 'bottom', labels: { font: { family: 'inherit', size: 12 }, color: '#374151', padding: 15 } },
-          tooltip: {
-            backgroundColor: '#111',
-            titleColor: '#fff',
-            bodyColor: 'rgba(255,255,255,0.8)',
-            padding: 10,
-            cornerRadius: 8
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              padding: 14,
+              font: { family: 'inherit', size: 12, weight: 600 }
+            }
           }
-        },
-        cutout: '70%'
+        }
       }
     });
   }
 
-  private updateCatChart() {
-    if (!this.catChart || !this.catChart.ctx) return;
-    try {
-      this.catChart.data.labels = this.categoryDistributionData.labels;
-      this.catChart.data.datasets[0].data = this.categoryDistributionData.data;
-      this.catChart.update();
-    } catch {
-      // Ignorar si el canvas se ha desmontado de la vista
+  private updateDistChart() {
+    if (!this.distChart) {
+      this.initDistChart();
+      return;
     }
+    const dataObj = this.getCurrentDistributionData();
+    const colors = [
+      '#111111', '#4b5563', '#9ca3af', '#d1d5db',
+      '#eac7d2', '#c59b27', '#2563eb', '#10b981',
+      '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'
+    ];
+
+    this.distChart.data.labels = dataObj.labels.length ? dataObj.labels : ['Sin datos'];
+    this.distChart.data.datasets[0].data = dataObj.data.length ? dataObj.data : [0];
+    this.distChart.data.datasets[0].backgroundColor = colors.slice(0, Math.max(1, dataObj.labels.length));
+    this.distChart.update();
   }
 
   private initWaChart() {
-    if (!this.waChartCanvas) return;
+    if (!this.waChartCanvas?.nativeElement) return;
+    const ctx = this.waChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
 
-    this.waChart = new Chart(this.waChartCanvas.nativeElement, {
+    const dataObj = this.quotesByDayData;
+
+    this.waChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: this.quotesByDayData.labels,
+        labels: dataObj.labels.length ? dataObj.labels : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
         datasets: [{
           label: 'Cotizaciones WhatsApp',
-          data: this.quotesByDayData.data,
-          backgroundColor: '#111111',
+          data: dataObj.data.length ? dataObj.data : [0, 0, 0, 0, 0, 0, 0],
+          backgroundColor: '#25D366',
           borderRadius: 6,
           borderSkipped: false
         }]
@@ -212,34 +275,34 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#111',
-            titleColor: '#fff',
-            bodyColor: 'rgba(255,255,255,0.8)',
-            padding: 10,
-            cornerRadius: 8,
-            callbacks: {
-              label: ctx => ` ${ctx.parsed.y ?? 0} cotizaciones`
-            }
-          }
+          legend: { display: false }
         },
         scales: {
-          x: { grid: { display: false }, border: { display: false }, ticks: { color: '#6b7280', font: { family: 'inherit', size: 12 } } },
-          y: { grid: { color: '#f1f3f5' }, border: { display: false }, ticks: { color: '#6b7280', font: { family: 'inherit', size: 12 } }, beginAtZero: true }
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'inherit', size: 11, weight: 600 } }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              precision: 0,
+              font: { family: 'inherit', size: 11 }
+            },
+            grid: { color: '#f1f3f5' }
+          }
         }
       }
     });
   }
 
   private updateWaChart() {
-    if (!this.waChart || !this.waChart.ctx) return;
-    try {
-      this.waChart.data.labels = this.quotesByDayData.labels;
-      this.waChart.data.datasets[0].data = this.quotesByDayData.data;
-      this.waChart.update();
-    } catch {
-      // Ignorar si el canvas se ha desmontado de la vista
+    if (!this.waChart) {
+      this.initWaChart();
+      return;
     }
+    this.waChart.data.labels = this.quotesByDayData.labels;
+    this.waChart.data.datasets[0].data = this.quotesByDayData.data;
+    this.waChart.update();
   }
 }

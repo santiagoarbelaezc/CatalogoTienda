@@ -38,7 +38,13 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
   private chart: Chart | null = null;
   private sub!: Subscription;
 
-  chartMode: 'category' | 'gender' = 'category';
+  chartMode: 'category' | 'brand' | 'gender' = 'category';
+
+  setChartMode(mode: 'category' | 'brand' | 'gender') {
+    if (this.chartMode === mode) return;
+    this.chartMode = mode;
+    this.updateChartData();
+  }
 
   kpis: KpiCard[] = [
     {
@@ -182,12 +188,6 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
     ];
   }
 
-  setChartMode(mode: 'category' | 'gender') {
-    if (this.chartMode === mode) return;
-    this.chartMode = mode;
-    this.updateChartData();
-  }
-
   private buildChart() {
     if (!this.chartCanvas) return;
 
@@ -262,9 +262,15 @@ export class DashboardPageComponent implements OnInit, AfterViewInit, OnDestroy 
         const st = (p.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
         map.set(key, (map.get(key) || 0) + st);
       });
+    } else if (this.chartMode === 'brand') {
+      this.allProducts.forEach(p => {
+        const key = p.marca?.nombre || 'Sin Marca';
+        const st = (p.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
+        map.set(key, (map.get(key) || 0) + st);
+      });
     } else {
       this.allProducts.forEach(p => {
-        const key = p.genero || 'Unisex';
+        const key = p.genero || 'Sin Definir';
         const st = (p.variantes || []).reduce((s, v) => s + (v.stock || 0), 0);
         map.set(key, (map.get(key) || 0) + st);
       });

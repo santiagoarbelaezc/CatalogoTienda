@@ -20,22 +20,22 @@
       <span class="dot">•</span>
       <span>Estado: <strong>{{ stockFilterLabel }}</strong></span>
       <span class="dot">•</span>
-      <span>Emitido por: <strong>{{ auth.currentUser?.nombre || 'Admin' }}</strong></span>
+      <span>Emitido por: <strong>{{ auth.currentUser?.nombre || 'Administrador' }}</strong></span>
     </div>
   </div>
 
   <!-- ═══ SCREEN-ONLY HEADER ════════════════════════════════════════════════ -->
   <div class="page-header no-print">
     <div>
-      <h1 class="page-title">Generador de Reportes</h1>
-      <p class="page-subtitle">Configura, filtra y descarga informes de tu inventario y catálogo en formato CSV o PDF</p>
+      <h1 class="page-title">Generador de Reportes e Informes</h1>
+      <p class="page-subtitle">Configura, filtra y descarga informes reales del inventario, catálogo, marcas y valoración en CSV o PDF</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn-secondary" (click)="printReport()">
         <span class="material-symbols-rounded">print</span>
         Imprimir / PDF
       </button>
-      <button type="button" class="btn-primary" (click)="exportCSV()" [disabled]="rows.length === 0">
+      <button type="button" class="btn-primary" (click)="exportCSV()" [disabled]="reportType === 'summary' ? groupedRows.length === 0 : rows.length === 0">
         <span class="material-symbols-rounded">download</span>
         Exportar CSV
       </button>
@@ -48,9 +48,10 @@
       <div class="field">
         <label class="form-label" for="rep-type">Tipo de Reporte</label>
         <select id="rep-type" [(ngModel)]="reportType" (change)="generateReport()" class="form-select">
-          <option value="stock">Inventario y Stock General</option>
-          <option value="catalog">Listado General de Productos</option>
-          <option value="pricing">Auditoría de Precios y Variantes</option>
+          <option value="stock">Inventario y Existencias (Stock)</option>
+          <option value="catalog">Catálogo General de Productos</option>
+          <option value="pricing">Auditoría de Precios y Valoración</option>
+          <option value="summary">Consolidado por Categorías y Marcas</option>
         </select>
       </div>
 
@@ -75,7 +76,8 @@
         <select id="rep-stock" [(ngModel)]="stockFilter" (change)="generateReport()" class="form-select">
           <option value="all">Todos los estados</option>
           <option value="active">Solo Activos</option>
-          <option value="low">Bajo Stock (&lt; 5 unidades)</option>
+          <option value="inactive">Solo Inactivos</option>
+          <option value="low">Bajo Stock (≤ 5 unidades)</option>
         </select>
       </div>
     </div>
@@ -97,11 +99,54 @@
     </div>
   </div>
 
-  <!-- ═══ TABLE CARD (Screen & Print) ═══════════════════════════════════════ -->
-  <div class="table-card card">
+  <!-- ═══ CONSOLIDATED TABLE CARD (When reportType === 'summary') ═══════════ -->
+  <div class="table-card card" *ngIf="reportType === 'summary'">
+    <div class="table-header no-print">
+      <h3 class="section-title">Consolidado por Categorías y Marcas</h3>
+      <span class="count-badge">{{ groupedRows.length }} grupos</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="text-left">Tipo</th>
+            <th class="text-left">Nombre</th>
+            <th class="text-center">Total Productos</th>
+            <th class="text-center">Total Variantes</th>
+            <th class="text-right">Stock Total</th>
+            <th class="text-right">Valorización Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of groupedRows">
+            <td class="text-left">
+              <span class="badge-talla" [class.badge-brand]="g.tipo === 'Marca'">{{ g.tipo }}</span>
+            </td>
+            <td class="text-left font-bold">{{ g.nombre }}</td>
+            <td class="text-center">{{ g.totalProductos }}</td>
+            <td class="text-center">{{ g.totalVariantes }} var.</td>
+            <td class="text-right">
+              <span class="stock-badge">{{ g.stockTotal | number }} un.</span>
+            </td>
+            <td class="text-right font-bold">$ {{ g.valorInventario | number }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Empty state -->
+      <div class="empty-report" *ngIf="groupedRows.length === 0">
+        <span class="material-symbols-rounded">manage_search</span>
+        <p>No se encontraron datos agrupados para mostrar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DETAIL TABLE CARD (For stock, catalog, and pricing) ═══════════════ -->
+  <div class="table-card card" *ngIf="reportType !== 'summary'">
     <div class="table-header no-print">
       <h3 class="section-title">
-        {{ reportType === 'stock' ? 'Reporte de Inventario y Stock' : (reportType === 'catalog' ? 'Catálogo General de Productos' : 'Auditoría de Precios') }}
+        {{ reportType === 'stock' ? 'Reporte de Inventario y Stock' : (reportType === 'catalog' ? 'Catálogo General de Productos' : 'Auditoría de Precios y Valoración') }}
       </h3>
       <span class="count-badge">{{ rows.length }} registros</span>
     </div>
@@ -117,6 +162,7 @@
             <th class="col-price text-right">Precio Base</th>
             <th class="col-var text-center">Variantes</th>
             <th class="col-stock text-right">Stock</th>
+            <th class="col-val text-right">Valor Inv.</th>
             <th class="col-status text-center">Estado</th>
           </tr>
         </thead>
@@ -141,9 +187,12 @@
               <span class="var-count">{{ row.totalVariantes }} var.</span>
             </td>
             <td class="col-stock text-right">
-              <span class="stock-badge" [class.low]="row.stockTotal < 5">
+              <span class="stock-badge" [class.low]="row.stockTotal <= 5">
                 {{ row.stockTotal }} un.
               </span>
+            </td>
+            <td class="col-val text-right font-bold">
+              $ {{ row.valorInventario | number }}
             </td>
             <td class="col-status text-center">
               <span class="status-badge" [class.active]="row.estado === 'Activo'">
@@ -158,7 +207,8 @@
             <td class="summary-val text-right">—</td>
             <td class="summary-val text-center">{{ totalItems }} ref.</td>
             <td class="summary-val text-right font-bold">{{ totalStock | number }} un.</td>
-            <td class="summary-val text-center font-bold">$ {{ totalInventoryValue | number }}</td>
+            <td class="summary-val text-right font-bold">$ {{ totalInventoryValue | number }}</td>
+            <td class="summary-val text-center">—</td>
           </tr>
         </tfoot>
       </table>
@@ -180,7 +230,7 @@
     </div>
     <div class="signature-box">
       <div class="signature-line"></div>
-      <span class="signature-name">Gestión de Inventarios</span>
+      <span class="signature-name">Supervisión / Gerencia</span>
       <span class="signature-role">Revisado y Aprobado</span>
     </div>
   </div>

@@ -87,6 +87,14 @@
           </button>
           <button
             type="button"
+            (click)="setChartMode('brand')"
+            [style.background]="chartMode === 'brand' ? '#111' : 'transparent'"
+            [style.color]="chartMode === 'brand' ? '#fff' : '#6b7280'"
+            style="border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            Por Marca
+          </button>
+          <button
+            type="button"
             (click)="setChartMode('gender')"
             [style.background]="chartMode === 'gender' ? '#111' : 'transparent'"
             [style.color]="chartMode === 'gender' ? '#fff' : '#6b7280'"

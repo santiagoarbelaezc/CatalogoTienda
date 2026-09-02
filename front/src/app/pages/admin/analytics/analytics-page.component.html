@@ -3,8 +3,14 @@
   <!-- Header -->
   <div class="page-header">
     <div>
-      <h1 class="page-title">Analíticas y Conversión</h1>
-      <p class="page-subtitle">Monitorea el rendimiento en tiempo real de tu catálogo y cotizaciones</p>
+      <h1 class="page-title">Analíticas y Métricas Reales</h1>
+      <p class="page-subtitle">Rendimiento en tiempo real del catálogo, distribución de inventario y cotizaciones en WhatsApp</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-refresh" (click)="loadAnalyticsFromBackend()" [disabled]="isLoading" title="Actualizar datos">
+        <span class="material-symbols-rounded" [class.spinning]="isLoading">refresh</span>
+        Actualizar Métricas
+      </button>
     </div>
   </div>
 
@@ -19,9 +25,9 @@
         <span class="kpi-value">{{ kpi.value }}</span>
         <div class="kpi-trend" [class.positive]="kpi.trend >= 0" [class.negative]="kpi.trend < 0">
           <span class="material-symbols-rounded">
-            {{ kpi.trend >= 0 ? 'trending_up' : 'trending_down' }}
+            {{ kpi.trend >= 0 ? 'check_circle' : 'warning' }}
           </span>
-          <span>{{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}% {{ kpi.trendLabel }}</span>
+          <span>{{ kpi.trendLabel }}</span>
         </div>
       </div>
     </div>
@@ -29,22 +35,50 @@
 
   <!-- Charts Row -->
   <div class="charts-grid">
-    <!-- Category Doughnut -->
+    <!-- Distribution Doughnut (Categoría, Marca, Género) -->
     <div class="chart-card card">
       <div class="chart-header">
-        <h3>Distribución por Categoría</h3>
-        <span class="chart-badge">Productos Activos</span>
+        <div>
+          <h3>Distribución del Catálogo</h3>
+          <span class="chart-subtitle">Productos registrados en base de datos</span>
+        </div>
+        <div class="chart-tabs">
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="distributionMode === 'category'" 
+            (click)="setDistributionMode('category')">
+            Categoría
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="distributionMode === 'brand'" 
+            (click)="setDistributionMode('brand')">
+            Marca
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="distributionMode === 'gender'" 
+            (click)="setDistributionMode('gender')">
+            Género
+          </button>
+        </div>
       </div>
       <div class="chart-container">
-        <canvas #catChart></canvas>
+        <canvas #distChart></canvas>
       </div>
     </div>
 
     <!-- WhatsApp Bar Chart -->
     <div class="chart-card card">
       <div class="chart-header">
-        <h3>Cotizaciones por Día (WhatsApp)</h3>
-        <span class="chart-badge">Semana Actual</span>
+        <div>
+          <h3>Cotizaciones en WhatsApp</h3>
+          <span class="chart-subtitle">Últimos 7 días continuos</span>
+        </div>
+        <span class="chart-badge">Eventos Reales</span>
       </div>
       <div class="chart-container">
         <canvas #waChart></canvas>
@@ -52,12 +86,12 @@
     </div>
   </div>
 
-  <!-- Top Variants Table -->
+  <!-- Top Variants / Consulted Products Table -->
   <div class="table-card card">
     <div class="table-header">
       <div>
-        <h3 class="section-title">Variantes Más Consultadas</h3>
-        <p class="section-subtitle">Las tallas y colores que generan mayor interés en cotizaciones</p>
+        <h3 class="section-title">Actividad por Variante de Producto</h3>
+        <p class="section-subtitle">Existencias actuales y consultas registradas en WhatsApp</p>
       </div>
     </div>
 
@@ -68,9 +102,9 @@
             <th>Producto / SKU</th>
             <th>Color</th>
             <th>Talla</th>
-            <th>Consultas (WA)</th>
-            <th>Tasa Conv.</th>
+            <th>Precio Unitario</th>
             <th>Stock Actual</th>
+            <th>Consultas (WhatsApp)</th>
           </tr>
         </thead>
         <tbody>
@@ -91,19 +125,82 @@
               <span class="badge-talla">{{ item.talla }}</span>
             </td>
             <td>
+              <span class="price-val">{{ formatCurrency(item.precio || 0) }}</span>
+            </td>
+            <td>
+              <span class="stock-badge" [class.low]="item.stock <= 5">
+                {{ item.stock }} {{ item.stock === 1 ? 'unidad' : 'unidades' }}
+                {{ item.stock <= 5 ? '(Bajo)' : '' }}
+              </span>
+            </td>
+            <td>
               <span class="inq-val">{{ item.inquiries }}</span>
             </td>
-            <td>
-              <span class="conv-val">{{ item.conversion }}</span>
-            </td>
-            <td>
-              <span class="stock-badge" [class.low]="item.stock < 5">
-                {{ item.stock }} un.
-              </span>
+          </tr>
+          <tr *ngIf="topVariants.length === 0">
+            <td colspan="6" class="empty-table-cell">
+              No hay variantes registradas en el catálogo.
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Catalog Summary Breakdown (Categories & Brands) -->
+  <div class="summary-grid" *ngIf="categorySummaries.length > 0 || brandSummaries.length > 0">
+    <!-- Category Breakdown Card -->
+    <div class="table-card card" *ngIf="categorySummaries.length > 0">
+      <div class="table-header">
+        <h3 class="section-title">Resumen por Categoría</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th>Productos</th>
+              <th>Stock Total</th>
+              <th>Valor Inventario</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cat of categorySummaries">
+              <td class="prod-name">{{ cat.nombre }}</td>
+              <td>{{ cat.total_productos }}</td>
+              <td>{{ cat.total_stock }} unid.</td>
+              <td class="price-val">{{ formatCurrency(cat.valor_inventario) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Brand Breakdown Card -->
+    <div class="table-card card" *ngIf="brandSummaries.length > 0">
+      <div class="table-header">
+        <h3 class="section-title">Resumen por Marca</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Marca</th>
+              <th>Productos</th>
+              <th>Stock Total</th>
+              <th>Valor Inventario</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let br of brandSummaries">
+              <td class="prod-name">{{ br.nombre }}</td>
+              <td>{{ br.total_productos }}</td>
+              <td>{{ br.total_stock }} unid.</td>
+              <td class="price-val">{{ formatCurrency(br.valor_inventario) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

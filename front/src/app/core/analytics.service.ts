@@ -9,9 +9,11 @@ export interface AnalyticKpi {
   icon: string;
   trend: number;
   trendLabel: string;
+  raw?: any;
 }
 
 export interface TopVariantMetric {
+  varianteId?: number;
   productoNombre: string;
   sku: string;
   colorHex: string;
@@ -20,13 +22,41 @@ export interface TopVariantMetric {
   inquiries: number;
   conversion: string;
   stock: number;
+  precio?: number;
+}
+
+export interface ChartDistribution {
+  labels: string[];
+  data: number[];
+}
+
+export interface CategorySummaryItem {
+  id: number;
+  nombre: string;
+  total_productos: number;
+  total_stock: number;
+  valor_inventario: number;
+}
+
+export interface BrandSummaryItem {
+  id: number;
+  nombre: string;
+  total_productos: number;
+  total_stock: number;
+  valor_inventario: number;
 }
 
 export interface DashboardAnalyticsResponse {
   kpis: AnalyticKpi[];
-  categoryDistribution: { labels: string[]; data: number[] };
-  quotesByDay: { labels: string[]; data: number[] };
+  categoryDistribution: ChartDistribution;
+  brandDistribution?: ChartDistribution;
+  genderDistribution?: ChartDistribution;
+  quotesByDay: ChartDistribution;
   topVariants: TopVariantMetric[];
+  catalogSummary?: {
+    categories: CategorySummaryItem[];
+    brands: BrandSummaryItem[];
+  };
 }
 
 @Injectable({ providedIn: 'root' })

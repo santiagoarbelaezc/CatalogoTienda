@@ -96,8 +96,10 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.syncCurrentSlide();
-    this.startAutoplay();
+    if (this.scrollContainer) {
+      this.syncCurrentSlide();
+      this.startAutoplay();
+    }
   }
 
   ngOnDestroy(): void {
