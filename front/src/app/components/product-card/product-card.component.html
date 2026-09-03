@@ -1,4 +1,4 @@
-<div class="product-card animate-scale-in">
+<div class="product-card animate-scale-in" (click)="onCardClick()" title="Clic para ver detalles completos">
 
   <!-- Image Gallery Section -->
   <div class="card-gallery">
@@ -25,7 +25,7 @@
     <div class="thumbnails" *ngIf="product.imagenes.length > 1">
       <button
         *ngFor="let img of product.imagenes; let idx = index"
-        (click)="activeImageIndex = idx"
+        (click)="$event.stopPropagation(); activeImageIndex = idx"
         class="thumb-btn"
         [class.active]="activeImageIndex === idx">
         <img [src]="img.url" class="thumb-img">
@@ -52,7 +52,7 @@
         <div class="color-dots">
           <button
             *ngFor="let col of availableColors"
-            (click)="selectColor(col)"
+            (click)="$event.stopPropagation(); selectColor(col)"
             [style.background-color]="col.hex"
             [class.selected]="selectedColor?.id === col.id"
             class="color-dot"
@@ -67,7 +67,7 @@
         <div class="talla-chips">
           <button
             *ngFor="let t of availableTallas"
-            (click)="selectTalla(t)"
+            (click)="$event.stopPropagation(); selectTalla(t)"
             class="talla-chip"
             [class.active]="selectedTalla?.id === t.id"
             [class.disabled]="selectedColor && !hasVariant(selectedColor, t)">
@@ -92,7 +92,7 @@
     <!-- Action Button -->
     <div class="action-row">
       <button
-        (click)="sendWhatsAppDirect()"
+        (click)="$event.stopPropagation(); sendWhatsAppDirect()"
         class="btn-whatsapp">
         <svg class="whatsapp-svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.758.459 3.474 1.33 4.982l-1.413 5.163 5.284-1.386a9.948 9.948 0 0 0 4.787 1.226h.004c5.506 0 9.99-4.478 9.99-9.985 0-2.667-1.039-5.176-2.926-7.062a9.923 9.923 0 0 0-7.066-2.922zm5.82 12.873c-.247.69-1.233 1.306-1.708 1.387-.474.08-1.077.12-3.155-.719-2.656-1.072-4.364-3.774-4.496-3.951-.133-.177-1.077-1.433-1.077-2.731 0-1.298.679-1.936.924-2.196.246-.26.538-.325.717-.325.179 0 .358.002.513.01.166.008.389-.063.608.463.225.54.767 1.872.834 2.008.067.136.112.296.022.473-.089.177-.134.288-.268.444-.134.156-.282.35-.403.47-.134.133-.274.278-.118.546.156.268.694 1.144 1.49 1.853 1.025.912 1.889 1.196 2.157 1.33.268.134.425.112.581-.067.156-.178.67-.78 0.848-1.047.178-.268.357-.223.596-.134.238.089 1.517.714 1.777.844.26.13.433.195.496.303.063.107.063.621-.184 1.311z"/>

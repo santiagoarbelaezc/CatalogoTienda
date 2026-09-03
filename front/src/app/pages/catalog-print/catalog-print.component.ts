@@ -14,6 +14,7 @@ import { CatalogService } from '../../core/catalog.service';
 })
 export class CatalogPrintComponent implements OnInit, OnDestroy {
   products: Producto[] = [];
+  productPages: Producto[][] = [];
   today: Date = new Date();
   
   private sub?: Subscription;
@@ -25,6 +26,12 @@ export class CatalogPrintComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.sub = this.catalogService.products$.subscribe(products => {
       this.products = [...products].sort((a, b) => a.nombre.localeCompare(b.nombre));
+      
+      // Agrupar en páginas de exactamente 4 productos (2x2)
+      this.productPages = [];
+      for (let i = 0; i < this.products.length; i += 4) {
+        this.productPages.push(this.products.slice(i, i + 4));
+      }
       
       if (this.products.length > 0 && !this.hasTriggeredPrint) {
         this.hasTriggeredPrint = true;

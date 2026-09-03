@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { CatalogFiltersComponent, CatalogFilters } from '../../components/catalog-filters/catalog-filters.component';
 import { ProductCardComponent } from '../../components/product-card/product-card.component';
 import { CartInquiryComponent, InquiryItem } from '../../components/cart-inquiry/cart-inquiry.component';
+import { ProductDetailModalComponent } from '../../components/product-detail-modal/product-detail-modal.component';
 import { Producto, Variante } from '../../models/catalog.models';
 import { CatalogService } from '../../core/catalog.service';
 import { AuthService } from '../../auth/auth.service';
@@ -26,7 +27,7 @@ interface HeroImageItem {
 @Component({
   selector: 'app-catalog-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CatalogFiltersComponent, ProductCardComponent, CartInquiryComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CatalogFiltersComponent, ProductCardComponent, CartInquiryComponent, ProductDetailModalComponent],
   templateUrl: './catalog-page.component.html',
   styleUrls: ['./catalog-page.component.scss']
 })
@@ -35,6 +36,15 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
   searchQuery = '';
   isScrolled = false;
+  selectedModalProduct: Producto | null = null;
+
+  openProductModal(product: Producto): void {
+    this.selectedModalProduct = product;
+  }
+
+  closeProductModal(): void {
+    this.selectedModalProduct = null;
+  }
 
   promoAnnouncements: { text: string; icon: string }[] = [
     { text: 'Envíos a todo Calarcá, Quindío', icon: 'local_shipping' },

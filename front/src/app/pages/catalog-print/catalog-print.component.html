@@ -8,56 +8,62 @@
     </a>
     <button type="button" (click)="triggerPrint()" class="btn-print-manual">
       <span class="material-symbols-rounded">print</span>
-      Imprimir / Guardar PDF
+      Imprimir / Guardar PDF (4 por página)
     </button>
   </div>
 
-  <!-- Header -->
-  <header class="print-header">
-    <div class="brand">
-      <div class="brand-icon">
-        <span class="material-symbols-rounded">style</span>
+  <!-- Paginated Pages (Exactamente 4 elementos por página) -->
+  <div class="print-page" *ngFor="let page of productPages; let pageIndex = index">
+    
+    <!-- Header of each page -->
+    <header class="print-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <span class="material-symbols-rounded">style</span>
+        </div>
+        <div class="brand-text">
+          <h1>Catálogo de Productos</h1>
+          <span class="sub">Tienda Íntima • Colección Oficial</span>
+        </div>
       </div>
-      <div class="brand-text">
-        <h1>Catálogo de Productos</h1>
-        <span class="sub">Tienda Íntima • Colección Oficial</span>
+      <div class="meta-info">
+        <span class="meta-badge">Emisión: {{ today | date:'dd/MM/yyyy' }}</span>
+        <span class="meta-badge highlight">{{ products.length }} Referencias</span>
       </div>
-    </div>
-    <div class="meta-info">
-      <span class="meta-badge">Emisión: {{ today | date:'dd/MM/yyyy' }}</span>
-      <span class="meta-badge highlight">{{ products.length }} Referencias</span>
-    </div>
-  </header>
+    </header>
 
-  <!-- Products Grid -->
-  <div class="print-products">
-    <div class="product-card" *ngFor="let product of products">
-      <div class="product-image-wrap">
-        <img *ngIf="product.imagenes?.length" [src]="product.imagenes[0].url" [alt]="product.nombre" class="product-img">
-        <div *ngIf="!product.imagenes?.length" class="no-img">
-          <span class="material-symbols-rounded">image</span>
-          <span>Sin imagen</span>
+    <!-- 4 Products Grid (2x2) -->
+    <div class="print-products-grid">
+      <div class="product-card" *ngFor="let product of page">
+        <div class="product-image-wrap">
+          <img *ngIf="product.imagenes?.length" [src]="product.imagenes[0].url" [alt]="product.nombre" class="product-img">
+          <div *ngIf="!product.imagenes?.length" class="no-img">
+            <span class="material-symbols-rounded">image</span>
+            <span>Sin imagen</span>
+          </div>
         </div>
-      </div>
-      <div class="product-body">
-        <div class="product-tags">
-          <span class="tag-cat">{{ product.categoria.nombre }}</span>
-          <span class="tag-sep">•</span>
-          <span class="tag-brand">{{ product.marca.nombre }}</span>
-        </div>
-        <h2 class="product-title">{{ product.nombre }}</h2>
-        <p class="product-desc" *ngIf="product.descripcion">{{ product.descripcion }}</p>
-        <div class="product-footer">
-          <span class="product-price">{{ formatPrice(product.precio_base) }}</span>
-          <span class="product-sku">SKU: {{ product.variantes[0] ? product.variantes[0].sku : 'PRD-' + product.id }}</span>
+        <div class="product-body">
+          <div class="product-tags">
+            <span class="tag-cat">{{ product.categoria.nombre }}</span>
+            <span class="tag-sep">•</span>
+            <span class="tag-brand">{{ product.marca.nombre }}</span>
+          </div>
+          <h2 class="product-title">{{ product.nombre }}</h2>
+          <p class="product-desc" *ngIf="product.descripcion">{{ product.descripcion }}</p>
+          <div class="product-footer">
+            <span class="product-price">{{ formatPrice(product.precio_base) }}</span>
+            <span class="product-sku">SKU: {{ product.variantes[0] ? product.variantes[0].sku : 'PRD-' + product.id }}</span>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Footer of each page -->
+    <footer class="print-footer">
+      <p>Documento oficial de catálogo • Tienda Íntima © {{ today | date:'yyyy' }}</p>
+      <span class="page-counter">Página {{ pageIndex + 1 }} de {{ productPages.length }}</span>
+    </footer>
+
   </div>
-
-  <!-- Footer -->
-  <footer class="print-footer">
-    <p>Documento oficial de catálogo • Tienda Íntima © {{ today | date:'yyyy' }}. Todos los derechos reservados.</p>
-  </footer>
 
 </div>

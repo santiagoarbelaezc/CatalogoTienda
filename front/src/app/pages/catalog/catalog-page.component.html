@@ -87,6 +87,7 @@
           *ngFor="let prod of paginatedProducts; let i = index"
           [product]="prod"
           [reverseLayout]="i % 2 === 1"
+          (openDetail)="openProductModal($event)"
           (addToInquiry)="handleAddToInquiry($event)">
         </app-product-card>
       </div>
@@ -117,6 +118,14 @@
   (removeItem)="handleRemoveItem($event)"
   (clearAll)="handleClearAll()">
 </app-cart-inquiry>
+
+<!-- Product Detail Modal -->
+<app-product-detail-modal
+  *ngIf="selectedModalProduct"
+  [product]="selectedModalProduct"
+  (close)="closeProductModal()"
+  (addToInquiry)="handleAddToInquiry($event)">
+</app-product-detail-modal>
 
 <!-- Footer -->
 <footer class="catalog-footer">

@@ -1,0 +1,163 @@
+<div class="modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="modal-card animate-scale-in" (click)="$event.stopPropagation()">
+    
+    <!-- Close Button -->
+    <button type="button" class="btn-close" (click)="closeModal()" aria-label="Cerrar modal" title="Cerrar ventana (Esc)">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+
+    <div class="modal-body-grid">
+
+      <!-- Left Column: Big Image Gallery -->
+      <div class="modal-gallery">
+        <div class="modal-main-img-wrap">
+          <div class="gallery-badges">
+            <span class="badge badge-featured">DESTACADO</span>
+            <span class="badge badge-gender" *ngIf="product.genero">{{ product.genero }}</span>
+          </div>
+
+          <img
+            *ngIf="product.imagenes && product.imagenes.length > 0 && product.imagenes[activeImageIndex]"
+            [src]="product.imagenes[activeImageIndex].url"
+            [alt]="product.nombre"
+            class="modal-main-img" />
+
+          <div *ngIf="!product.imagenes || product.imagenes.length === 0" class="no-image-box">
+            <span class="material-symbols-rounded">image_not_supported</span>
+            <span>Sin imagen disponible</span>
+          </div>
+        </div>
+
+        <!-- Thumbnails List -->
+        <div class="modal-thumbnails" *ngIf="product.imagenes && product.imagenes.length > 1">
+          <button
+            *ngFor="let img of product.imagenes; let idx = index"
+            (click)="activeImageIndex = idx"
+            class="modal-thumb-btn"
+            [class.active]="activeImageIndex === idx">
+            <img [src]="img.url" class="modal-thumb-img" [alt]="product.nombre" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Product Information & Purchase Area -->
+      <div class="modal-info">
+
+        <!-- Header -->
+        <div class="product-main-header">
+          <div class="kicker-header">
+            <span class="cat-kicker">{{ product.categoria.nombre }}</span>
+            <span class="kicker-dot">•</span>
+            <span class="brand-kicker">{{ product.marca.nombre }}</span>
+          </div>
+          <h1 class="product-title">{{ product.nombre }}</h1>
+        </div>
+
+        <!-- Description -->
+        <div class="description-box" *ngIf="product.descripcion">
+          <p class="desc-text">{{ product.descripcion }}</p>
+        </div>
+
+        <!-- Specifications horizontal pills -->
+        <div class="specs-pills">
+          <span class="spec-pill" *ngIf="product.tela">
+            <span class="spec-lbl">Tela:</span> {{ product.tela.nombre }}
+          </span>
+          <span class="spec-pill" *ngIf="product.tela?.composicion">
+            <span class="spec-lbl">Composición:</span> {{ product.tela.composicion }}
+          </span>
+          <span class="spec-pill" *ngIf="product.temporada">
+            <span class="spec-lbl">Temporada:</span> {{ product.temporada }}
+          </span>
+          <span class="spec-pill font-mono">
+            <span class="spec-lbl">SKU:</span> {{ currentSku }}
+          </span>
+        </div>
+
+        <!-- Selectors Area -->
+        <div class="selectors-container">
+          
+          <!-- Color Selector -->
+          <div class="selector-section" *ngIf="availableColors.length > 0">
+            <div class="selector-header">
+              <span class="selector-title">Color disponible:</span>
+              <span class="selector-current">{{ selectedColor ? selectedColor.nombre : 'Seleccionar' }}</span>
+            </div>
+            <div class="color-options">
+              <button
+                *ngFor="let col of availableColors"
+                (click)="selectColor(col)"
+                [style.background-color]="col.hex"
+                [class.selected]="selectedColor?.id === col.id"
+                class="modal-color-btn"
+                [title]="col.nombre">
+              </button>
+            </div>
+          </div>
+
+          <!-- Size (Talla) Selector -->
+          <div class="selector-section" *ngIf="availableTallas.length > 0">
+            <div class="selector-header">
+              <span class="selector-title">Talla:</span>
+              <span class="selector-current">{{ selectedTalla ? selectedTalla.nombre : 'Seleccionar' }}</span>
+            </div>
+            <div class="talla-options">
+              <button
+                *ngFor="let t of availableTallas"
+                (click)="selectTalla(t)"
+                class="modal-talla-btn"
+                [class.active]="selectedTalla?.id === t.id"
+                [class.disabled]="selectedColor && !hasVariant(selectedColor, t)">
+                {{ t.nombre }}
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Purchase & Price Area (Reubicado al bloque principal de compra) -->
+        <div class="purchase-box-card">
+          
+          <!-- Price and Quantity on the left -->
+          <div class="purchase-price-qty">
+            <div class="price-display-block">
+              <span class="price-label-text">Precio Total</span>
+              <span class="price-value-large">{{ formatPrice(currentPrice) }}</span>
+            </div>
+
+            <div class="qty-and-stock">
+              <div class="qty-picker">
+                <button type="button" (click)="decrementQty()" class="qty-btn" [disabled]="quantity <= 1">
+                  <span class="material-symbols-rounded">remove</span>
+                </button>
+                <span class="qty-number">{{ quantity }}</span>
+                <button type="button" (click)="incrementQty()" class="qty-btn" [disabled]="quantity >= currentStock">
+                  <span class="material-symbols-rounded">add</span>
+                </button>
+              </div>
+
+              <div class="stock-badge" [class.in-stock]="currentStock > 0" [class.out-stock]="currentStock <= 0">
+                <span class="stock-dot"></span>
+                <span>{{ currentStock > 0 ? (currentStock + ' en stock') : 'Agotado' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTAs on the right -->
+          <div class="purchase-actions">
+            <button (click)="sendWhatsAppDirect()" class="btn-modal-whatsapp">
+              <svg class="whatsapp-svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.758.459 3.474 1.33 4.982l-1.413 5.163 5.284-1.386a9.948 9.948 0 0 0 4.787 1.226h.004c5.506 0 9.99-4.478 9.99-9.985 0-2.667-1.039-5.176-2.926-7.062a9.923 9.923 0 0 0-7.066-2.922zm5.82 12.873c-.247.69-1.233 1.306-1.708 1.387-.474.08-1.077.12-3.155-.719-2.656-1.072-4.364-3.774-4.496-3.951-.133-.177-1.077-1.433-1.077-2.731 0-1.298.679-1.936.924-2.196.246-.26.538-.325.717-.325.179 0 .358.002.513.01.166.008.389-.063.608.463.225.54.767 1.872.834 2.008.067.136.112.296.022.473-.089.177-.134.288-.268.444-.134.156-.282.35-.403.47-.134.133-.274.278-.118.546.156.268.694 1.144 1.49 1.853 1.025.912 1.889 1.196 2.157 1.33.268.134.425.112.581-.067.156-.178.67-.78 0.848-1.047.178-.268.357-.223.596-.134.238.089 1.517.714 1.777.844.26.13.433.195.496.303.063.107.063.621-.184 1.311z"/>
+              </svg>
+              <span>Pedir por WhatsApp</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
