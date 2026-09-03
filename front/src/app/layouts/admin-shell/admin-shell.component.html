@@ -32,11 +32,17 @@
       </li>
     </ul>
 
-    <!-- Bottom link -->
+    <!-- Bottom links -->
     <div class="sidebar-footer">
-      <a routerLink="/" class="nav-item view-store" [title]="isSidebarCollapsed ? 'Ver tienda' : ''">
-        <span class="material-symbols-rounded nav-icon">open_in_new</span>
-        <span class="nav-label" *ngIf="!isSidebarCollapsed">Ver tienda pública</span>
+      <a href="/" target="_blank" class="nav-item view-store" [title]="isSidebarCollapsed ? 'Ver catálogo en vivo' : ''">
+        <span class="material-symbols-rounded nav-icon">menu_book</span>
+        <span class="nav-label" *ngIf="!isSidebarCollapsed">Ver catálogo en vivo</span>
+        <span class="material-symbols-rounded ext-icon" *ngIf="!isSidebarCollapsed">open_in_new</span>
+      </a>
+      <a href="https://tiendaintima.com/" target="_blank" rel="noopener noreferrer" class="nav-item view-web" [title]="isSidebarCollapsed ? 'Ver tienda web en vivo' : ''">
+        <span class="material-symbols-rounded nav-icon">storefront</span>
+        <span class="nav-label" *ngIf="!isSidebarCollapsed">Ver tienda web en vivo</span>
+        <span class="material-symbols-rounded ext-icon" *ngIf="!isSidebarCollapsed">open_in_new</span>
       </a>
     </div>
   </nav>
@@ -51,7 +57,21 @@
           <span class="material-symbols-rounded">{{ isSidebarCollapsed ? 'menu' : 'menu_open' }}</span>
         </button>
         <span class="live-dot"></span>
-        <span class="topbar-label">Panel de Administración en Vivo</span>
+        <span class="topbar-label">Panel Admin</span>
+
+        <!-- Botones de Acceso en Vivo -->
+        <div class="topbar-live-group">
+          <a href="/" target="_blank" class="topbar-live-btn" title="Abrir catálogo en vivo (este proyecto)">
+            <span class="material-symbols-rounded live-btn-icon">menu_book</span>
+            <span>Catálogo en vivo</span>
+            <span class="material-symbols-rounded live-ext">open_in_new</span>
+          </a>
+          <a href="https://tiendaintima.com/" target="_blank" rel="noopener noreferrer" class="topbar-live-btn" title="Abrir tienda web principal en vivo (tiendaintima.com)">
+            <span class="material-symbols-rounded live-btn-icon">storefront</span>
+            <span>Tienda Web en vivo</span>
+            <span class="material-symbols-rounded live-ext">open_in_new</span>
+          </a>
+        </div>
       </div>
       <div class="topbar-right">
         <div class="user-info" *ngIf="currentUser">

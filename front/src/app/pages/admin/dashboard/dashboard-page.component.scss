@@ -79,6 +79,55 @@
   .material-symbols-rounded { font-size: 1.125rem; }
 }
 
+.btn-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 1rem;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.625rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  .material-symbols-rounded {
+    font-size: 1.15rem;
+    color: #4b5563;
+    transition: color 0.15s ease;
+  }
+
+  .ext-mini {
+    font-size: 0.95rem;
+    color: #9ca3af;
+  }
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #111827;
+    color: #111827;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .material-symbols-rounded {
+      color: #111827;
+    }
+  }
+
+  &.btn-live-web {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #0f172a;
+    }
+  }
+}
+
 /* ─── KPI Grid ─────────────────────────────────────────── */
 .kpi-grid {
   display: grid;

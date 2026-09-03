@@ -21,11 +21,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Si el backend responde 401 (token expirado o inválido), redirigir al login
+      // Si el backend responde 401 (token expirado o inválido), limpiar credenciales
       if (error.status === 401 && !req.url.includes('/auth/login')) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem('cti_auth');
-        router.navigate(['/admin/login']);
+        // Redirigir a login solo si el usuario se encuentra dentro del panel de administración
+        if (router.url.startsWith('/admin')) {
+          router.navigate(['/admin/login']);
+        }
       }
       return throwError(() => error);
     })

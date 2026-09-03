@@ -166,6 +166,8 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
     this.updateWaChart();
   }
 
+  private isViewInit = false;
+
   formatCurrency(val: number): string {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -176,6 +178,7 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
+    this.isViewInit = true;
     setTimeout(() => {
       this.initDistChart();
       this.initWaChart();
@@ -235,6 +238,9 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private updateDistChart() {
+    if (!this.isViewInit || !this.distChartCanvas?.nativeElement) {
+      return;
+    }
     if (!this.distChart) {
       this.initDistChart();
       return;
@@ -253,7 +259,7 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private initWaChart() {
-    if (!this.waChartCanvas?.nativeElement) return;
+    if (!this.isViewInit || !this.waChartCanvas?.nativeElement) return;
     const ctx = this.waChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
 
@@ -297,6 +303,9 @@ export class AnalyticsPageComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private updateWaChart() {
+    if (!this.isViewInit || !this.waChartCanvas?.nativeElement) {
+      return;
+    }
     if (!this.waChart) {
       this.initWaChart();
       return;

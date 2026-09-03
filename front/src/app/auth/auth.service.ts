@@ -84,8 +84,11 @@ export class AuthService {
           this._currentUser$.next(adminUser);
         }
       },
-      error: () => {
-        this.logout();
+      error: (err) => {
+        // Solo cerrar sesión si el servidor confirma explícitamente que el token expiró o es inválido (401)
+        if (err?.status === 401) {
+          this.logout();
+        }
       }
     });
   }

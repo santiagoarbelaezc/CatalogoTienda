@@ -44,17 +44,87 @@
 
   <!-- Categorías -->
   <div class="filter-group">
-    <label class="filter-label">Categorías</label>
-    <div class="cat-list">
-      <button (click)="selectCategory(null)"
-              class="cat-item" [class.active]="filters.categoriaId === null">Todas</button>
-      <div *ngFor="let cat of categorias">
-        <span class="cat-parent-label">{{ cat.nombre }}</span>
-        <button *ngFor="let sub of cat.subcategorias"
-                (click)="selectCategory(sub.id)"
-                class="cat-item cat-sub" [class.active]="filters.categoriaId === sub.id">
-          {{ sub.nombre }}
+    <div class="cat-header-row">
+      <label class="filter-label">Categorías</label>
+      <div class="cat-selected-badge" *ngIf="filters.categoriaId !== null">
+        <span>{{ getSelectedCategoryNombre() }}</span>
+        <button type="button" (click)="clearCategory()" class="clear-cat-btn" title="Quitar filtro de categoría">
+          <span class="material-symbols-rounded">close</span>
         </button>
+      </div>
+    </div>
+
+    <div class="cat-list">
+      <!-- Opción: Todas las categorías -->
+      <button
+        type="button"
+        (click)="selectCategory(null)"
+        class="cat-item cat-item-all"
+        [class.active]="filters.categoriaId === null">
+        <span class="cat-item-left">
+          <span class="material-symbols-rounded cat-item-icon">apps</span>
+          <span class="cat-item-text">Todas las categorías</span>
+        </span>
+      </button>
+
+      <!-- Lista de Categorías -->
+      <div *ngFor="let cat of categorias" class="cat-item-wrapper">
+
+        <!-- Categoría Padre CON subcategorías -->
+        <div *ngIf="cat.subcategorias && cat.subcategorias.length > 0" class="cat-parent-row"
+             [class.active]="filters.categoriaId === cat.id">
+          <button
+            type="button"
+            (click)="selectCategory(cat.id)"
+            class="cat-item cat-parent-btn"
+            [class.active]="filters.categoriaId === cat.id">
+            <span class="cat-item-left">
+              <span class="material-symbols-rounded cat-item-icon">category</span>
+              <span class="cat-item-text">{{ cat.nombre }}</span>
+            </span>
+          </button>
+          
+          <!-- Botón acordeón para expandir/colapsar -->
+          <button
+            type="button"
+            class="cat-chevron-btn"
+            [class.is-expanded]="isExpanded(cat.id)"
+            (click)="toggleExpand(cat.id, $event)"
+            [title]="isExpanded(cat.id) ? 'Ocultar subcategorías' : 'Ver subcategorías'">
+            <span class="material-symbols-rounded">
+              {{ isExpanded(cat.id) ? 'expand_more' : 'chevron_right' }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Subcategorías si el acordeón está desplegado -->
+        <div
+          *ngIf="cat.subcategorias && cat.subcategorias.length > 0 && isExpanded(cat.id)"
+          class="cat-sub-tree animate-fade-in">
+          <button
+            *ngFor="let sub of cat.subcategorias"
+            type="button"
+            (click)="selectCategory(sub.id)"
+            class="cat-item cat-sub-item"
+            [class.active]="filters.categoriaId === sub.id">
+            <span class="cat-sub-bullet"></span>
+            <span class="cat-item-text">{{ sub.nombre }}</span>
+          </button>
+        </div>
+
+        <!-- Categoría Padre SIN subcategorías (Clickable directa) -->
+        <button
+          *ngIf="!cat.subcategorias || cat.subcategorias.length === 0"
+          type="button"
+          (click)="selectCategory(cat.id)"
+          class="cat-item cat-single-item"
+          [class.active]="filters.categoriaId === cat.id">
+          <span class="cat-item-left">
+            <span class="material-symbols-rounded cat-item-icon">label</span>
+            <span class="cat-item-text">{{ cat.nombre }}</span>
+          </span>
+        </button>
+
       </div>
     </div>
   </div>
@@ -82,12 +152,65 @@
 
   <!-- Tallas -->
   <div class="filter-group">
-    <label class="filter-label">Talla</label>
-    <div class="talla-grid">
-      <button *ngFor="let t of tallas" (click)="selectTalla(t.id)"
-              class="talla-btn" [class.active]="filters.tallaId === t.id">
+    <div class="talla-header-row">
+      <label class="filter-label">Talla</label>
+      <div class="talla-selected-badge" *ngIf="filters.tallaId !== null">
+        <span>Talla: <strong>{{ getSelectedTallaNombre() }}</strong></span>
+        <button type="button" (click)="clearTalla()" class="clear-talla-btn" title="Quitar filtro de talla">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtro por Tipo de Prenda -->
+    <div class="tipo-prenda-filter">
+      <span class="tipo-prenda-caption">Tipo de prenda</span>
+      <div class="tipo-prenda-pills">
+        <button
+          type="button"
+          class="tipo-pill"
+          [class.active]="selectedGarmentGroupId === 'ALL'"
+          (click)="selectGarmentGroup('ALL')">
+          Todas
+        </button>
+        <button
+          type="button"
+          *ngFor="let g of tallaGroups"
+          class="tipo-pill"
+          [class.active]="selectedGarmentGroupId === g.id"
+          (click)="selectGarmentGroup(g.id)">
+          {{ g.shortName }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Rejilla de Tallas por Grupo Específico -->
+    <div class="talla-grid animate-fade-in" *ngIf="selectedGarmentGroupId !== 'ALL'">
+      <button
+        *ngFor="let t of activeTallas"
+        (click)="selectTalla(t.id)"
+        class="talla-btn"
+        [class.active]="filters.tallaId === t.id"
+        [title]="'Talla ' + t.nombre">
         {{ t.nombre }}
       </button>
+    </div>
+
+    <!-- Rejilla de Tallas Agrupadas si está en 'ALL' (Todas) -->
+    <div class="talla-groups-container animate-fade-in" *ngIf="selectedGarmentGroupId === 'ALL'">
+      <div class="talla-subgroup" *ngFor="let g of tallaGroups">
+        <span class="talla-subgroup-title">{{ g.shortName }}</span>
+        <div class="talla-grid">
+          <button
+            *ngFor="let t of g.tallas"
+            (click)="selectTalla(t.id)"
+            class="talla-btn"
+            [class.active]="filters.tallaId === t.id"
+            [title]="'Talla ' + t.nombre">
+            {{ t.nombre }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

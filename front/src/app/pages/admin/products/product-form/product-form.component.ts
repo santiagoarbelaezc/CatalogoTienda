@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { CatalogService } from '../../../../core/catalog.service';
 import { CategoriesService } from '../../../../core/categories.service';
 import { BrandsService } from '../../../../core/brands.service';
+import { TallasService, TallaGroup } from '../../../../core/tallas.service';
 import { ToastService } from '../../../../core/toast.service';
 import { Producto, Categoria, Variante, Color, Talla, Marca } from '../../../../models/catalog.models';
 import { TELAS, COLORES, TALLAS } from '../../../../data/mock-data';
@@ -30,16 +31,16 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   isEditMode = false;
   editingId: number | null = null;
 
-  // Form model
+  // Form Fields
   nombre = '';
   descripcion = '';
   precioBase = 0;
-  genero: 'Hombre' | 'Mujer' | 'Unisex' = 'Unisex';
-  temporada = '';
-  activo = true;
   categoriaId: number | null = null;
-  marcaId: number = 1;
+  marcaId: number | null = null;
   telaId: number = 1;
+  genero: string = 'Mujer';
+  temporada: string = 'Atemporal';
+  activo = true;
 
   // Variants
   variantes: VarianteForm[] = [{ sku: '', precio: 0, stock: 0, colorId: 1, tallaId: 1 }];
@@ -50,6 +51,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   telas = TELAS;
   colores = COLORES;
   tallas = TALLAS;
+  tallaGroups: TallaGroup[] = [];
 
   // Images
   existingImages: any[] = [];
@@ -63,12 +65,19 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     private catalogService: CatalogService,
     private categoriesService: CategoriesService,
     private brandsService: BrandsService,
+    private tallasService: TallasService,
     private toast: ToastService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit() {
+    this.subs.add(this.tallasService.tallas$.subscribe(list => {
+      this.tallas = list;
+      this.tallaGroups = this.tallasService.groupTallas(list);
+    }));
+    this.tallasService.loadFromServer();
+
     this.subs.add(this.categoriesService.categories$.subscribe(() => {
       this.categorias = this.categoriesService.getAllFlat();
       if (this.categorias.length > 0 && this.categoriaId === null && !this.isEditMode) {

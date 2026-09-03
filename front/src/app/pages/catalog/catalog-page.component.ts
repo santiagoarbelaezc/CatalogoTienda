@@ -6,6 +6,7 @@ import { ProductCardComponent } from '../../components/product-card/product-card
 import { CartInquiryComponent, InquiryItem } from '../../components/cart-inquiry/cart-inquiry.component';
 import { Producto, Variante } from '../../models/catalog.models';
 import { CatalogService } from '../../core/catalog.service';
+import { AuthService } from '../../auth/auth.service';
 
 interface HeroImageItem {
   img: string;
@@ -82,7 +83,10 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   inquiryItems: InquiryItem[] = [];
   activeFilters!: CatalogFilters;
 
-  constructor(private catalogService: CatalogService) {}
+  constructor(
+    private catalogService: CatalogService,
+    public auth: AuthService
+  ) {}
 
   ngOnInit() {
     this.catalogService.products$.subscribe(products => {
@@ -132,7 +136,9 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
         p.variantes.some(v => v.sku.toLowerCase().includes(query))
       );
     }
-    if (filters.categoriaId !== null) result = result.filter(p => p.categoria.id === filters.categoriaId);
+    if (filters.categoriaId !== null) {
+      result = result.filter(p => p.categoria.id === filters.categoriaId || p.categoria.id_padre === filters.categoriaId);
+    }
     if (filters.marcaId !== null)     result = result.filter(p => p.marca.id === filters.marcaId);
     if (filters.genero)               result = result.filter(p => p.genero === filters.genero);
     if (filters.temporada)            result = result.filter(p => p.temporada === filters.temporada);

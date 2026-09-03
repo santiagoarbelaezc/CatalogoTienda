@@ -20,14 +20,14 @@
   </nav>
 
   <div class="header-right">
-    <a routerLink="/admin/login" class="nav-pill-btn nav-pill-btn--account" id="nav-login-btn">
+    <a *ngIf="auth.isAuthenticated()" routerLink="/admin/dashboard" class="nav-pill-btn nav-pill-btn--admin" id="nav-admin-btn" title="Ir al panel de administración">
+      <span class="material-symbols-rounded" style="font-size: 1.1rem;">dashboard</span>
+      Panel Admin
+    </a>
+    <a *ngIf="!auth.isAuthenticated()" routerLink="/admin/login" class="nav-pill-btn nav-pill-btn--account" id="nav-login-btn">
       <span class="material-symbols-rounded" style="font-size: 1.1rem;">login</span>
       Ingresar
     </a>
-    <div class="nav-pill-status">
-      <span class="status-dot"></span>
-      <span>SITIO EN DESARROLLO</span>
-    </div>
   </div>
 </header>
 

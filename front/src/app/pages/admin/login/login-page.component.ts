@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { AuthService } from '../../../auth/auth.service';
   templateUrl: './login-page.component.html',
   styleUrls: ['./login-page.component.scss']
 })
-export class LoginPageComponent {
+export class LoginPageComponent implements OnInit {
   features = [
     { icon: 'inventory_2', text: 'Gestión de productos y variantes' },
     { icon: 'category', text: 'Administración de categorías' },
@@ -27,6 +27,12 @@ export class LoginPageComponent {
   errorMessage = '';
 
   constructor(private auth: AuthService, private router: Router) {}
+
+  ngOnInit(): void {
+    if (this.auth.isAuthenticated()) {
+      this.router.navigate(['/admin/dashboard']);
+    }
+  }
 
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;

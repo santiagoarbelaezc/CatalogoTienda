@@ -56,10 +56,56 @@ export const COLORES: Color[] = [
 
 // Tallas
 export const TALLAS: Talla[] = [
+  // Ropa / Pijamas
+  { id: 5, nombre: 'XS' },
   { id: 1, nombre: 'S' },
   { id: 2, nombre: 'M' },
   { id: 3, nombre: 'L' },
-  { id: 4, nombre: 'XL' }
+  { id: 4, nombre: 'XL' },
+  { id: 6, nombre: 'XXL' },
+  { id: 7, nombre: '3XL' },
+  { id: 8, nombre: 'ÚNICA' },
+
+  // Brasieres y Copas
+  { id: 9, nombre: '30B' },
+  { id: 10, nombre: '32A' },
+  { id: 11, nombre: '32B' },
+  { id: 12, nombre: '32C' },
+  { id: 13, nombre: '32D' },
+  { id: 14, nombre: '34A' },
+  { id: 15, nombre: '34B' },
+  { id: 16, nombre: '34C' },
+  { id: 17, nombre: '34D' },
+  { id: 18, nombre: '36A' },
+  { id: 19, nombre: '36B' },
+  { id: 20, nombre: '36C' },
+  { id: 21, nombre: '36D' },
+  { id: 22, nombre: '38A' },
+  { id: 23, nombre: '38B' },
+  { id: 24, nombre: '38C' },
+  { id: 25, nombre: '38D' },
+  { id: 26, nombre: '40B' },
+  { id: 27, nombre: '40C' },
+  { id: 28, nombre: '40D' },
+  { id: 29, nombre: '42B' },
+  { id: 30, nombre: '42C' },
+
+  // Brasieres / Tops (Contorno)
+  { id: 31, nombre: '32' },
+  { id: 32, nombre: '34' },
+  { id: 33, nombre: '36' },
+  { id: 34, nombre: '38' },
+  { id: 35, nombre: '40' },
+  { id: 36, nombre: '42' },
+
+  // Numéricas (Fajas, Panties, Jeans)
+  { id: 37, nombre: '6' },
+  { id: 38, nombre: '8' },
+  { id: 39, nombre: '10' },
+  { id: 40, nombre: '12' },
+  { id: 41, nombre: '14' },
+  { id: 42, nombre: '16' },
+  { id: 43, nombre: '18' }
 ];
 
 // Listado de Productos

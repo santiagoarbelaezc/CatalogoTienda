@@ -98,7 +98,14 @@
               <div class="field">
                 <label class="form-label">Talla</label>
                 <select [(ngModel)]="v.tallaId" [name]="'talla-' + i" class="form-select">
-                  <option *ngFor="let t of tallas" [ngValue]="t.id">{{ t.nombre }}</option>
+                  <ng-container *ngIf="tallaGroups.length > 0; else flatTallas">
+                    <optgroup *ngFor="let g of tallaGroups" [label]="g.name">
+                      <option *ngFor="let t of g.tallas" [ngValue]="t.id">{{ t.nombre }}</option>
+                    </optgroup>
+                  </ng-container>
+                  <ng-template #flatTallas>
+                    <option *ngFor="let t of tallas" [ngValue]="t.id">{{ t.nombre }}</option>
+                  </ng-template>
                 </select>
               </div>
               <div class="field">
