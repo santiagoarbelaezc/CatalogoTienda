@@ -1,249 +1,235 @@
-<!-- Mobile Filter Toggle -->
-<div class="mobile-toggle">
-  <span class="mobile-title">Filtros y Búsqueda</span>
-  <button
-    (click)="isMobileFiltersOpen = !isMobileFiltersOpen"
-    class="mobile-toggle-btn">
-    <span class="material-symbols-rounded">filter_alt</span>
-    {{ isMobileFiltersOpen ? 'Cerrar' : 'Filtrar' }}
-  </button>
-</div>
+<div class="top-filters-wrapper">
 
-<!-- Sidebar -->
-<aside
-  [class.hidden]="!isMobileFiltersOpen"
-  class="filters-sidebar lg:block animate-fade-in-up">
+  <!-- Main Horizontal Filters Bar -->
+  <div class="top-filters-bar">
 
-  <div class="sidebar-header">
-    <h3 class="sidebar-title">Filtros de Catálogo</h3>
-    <button (click)="resetFilters()" class="reset-btn">
-      <span class="material-symbols-rounded">restart_alt</span> Limpiar
-    </button>
-  </div>
-
-  <!-- Búsqueda -->
-  <div class="filter-group">
-    <label class="filter-label">Buscar</label>
-    <div class="input-wrap">
-      <span class="material-symbols-rounded input-icon">search</span>
-      <input type="text" [(ngModel)]="filters.searchQuery" (input)="emitFilters()"
-             placeholder="Nombre, SKU..." class="filter-input">
-    </div>
-  </div>
-
-  <!-- Ordenar -->
-  <div class="filter-group">
-    <label class="filter-label">Ordenar Por</label>
-    <select [(ngModel)]="filters.sortBy" (change)="emitFilters()" class="filter-select">
-      <option value="name-asc">Nombre: A-Z</option>
-      <option value="name-desc">Nombre: Z-A</option>
-      <option value="price-asc">Precio: Menor a Mayor</option>
-      <option value="price-desc">Precio: Mayor a Menor</option>
-    </select>
-  </div>
-
-  <!-- Categorías -->
-  <div class="filter-group">
-    <div class="cat-header-row">
-      <label class="filter-label">Categorías</label>
-      <div class="cat-selected-badge" *ngIf="filters.categoriaId !== null">
-        <span>{{ getSelectedCategoryNombre() }}</span>
-        <button type="button" (click)="clearCategory()" class="clear-cat-btn" title="Quitar filtro de categoría">
-          <span class="material-symbols-rounded">close</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="cat-list">
-      <!-- Opción: Todas las categorías -->
+    <!-- 2. Dropdown Categorías -->
+    <div class="filter-popover-wrapper">
       <button
         type="button"
-        (click)="selectCategory(null)"
-        class="cat-item cat-item-all"
-        [class.active]="filters.categoriaId === null">
-        <span class="cat-item-left">
-          <span class="material-symbols-rounded cat-item-icon">apps</span>
-          <span class="cat-item-text">Todas las categorías</span>
+        class="filter-trigger-btn"
+        [class.active]="filters.categoriaId !== null"
+        [class.is-open]="openPopover === 'categoria'"
+        (click)="togglePopover('categoria', $event)">
+        <span class="material-symbols-rounded trigger-icon">category</span>
+        <span class="trigger-label">
+          {{ filters.categoriaId !== null ? getSelectedCategoryNombre() : 'Categorías' }}
+        </span>
+        <span class="material-symbols-rounded trigger-arrow">
+          {{ openPopover === 'categoria' ? 'expand_less' : 'expand_more' }}
         </span>
       </button>
 
-      <!-- Lista de Categorías -->
-      <div *ngFor="let cat of categorias" class="cat-item-wrapper">
-
-        <!-- Categoría Padre CON subcategorías -->
-        <div *ngIf="cat.subcategorias && cat.subcategorias.length > 0" class="cat-parent-row"
-             [class.active]="filters.categoriaId === cat.id">
-          <button
-            type="button"
-            (click)="selectCategory(cat.id)"
-            class="cat-item cat-parent-btn"
-            [class.active]="filters.categoriaId === cat.id">
-            <span class="cat-item-left">
-              <span class="material-symbols-rounded cat-item-icon">category</span>
-              <span class="cat-item-text">{{ cat.nombre }}</span>
-            </span>
-          </button>
-          
-          <!-- Botón acordeón para expandir/colapsar -->
-          <button
-            type="button"
-            class="cat-chevron-btn"
-            [class.is-expanded]="isExpanded(cat.id)"
-            (click)="toggleExpand(cat.id, $event)"
-            [title]="isExpanded(cat.id) ? 'Ocultar subcategorías' : 'Ver subcategorías'">
-            <span class="material-symbols-rounded">
-              {{ isExpanded(cat.id) ? 'expand_more' : 'chevron_right' }}
-            </span>
+      <!-- Popover Menu Categorías -->
+      <div class="filter-popover-menu cat-popover animate-scale-in" *ngIf="openPopover === 'categoria'">
+        <div class="popover-header">
+          <span class="popover-title">Categorías</span>
+          <button *ngIf="filters.categoriaId !== null" (click)="clearCategory()" class="popover-clear-btn" type="button">
+            Limpiar
           </button>
         </div>
 
-        <!-- Subcategorías si el acordeón está desplegado -->
-        <div
-          *ngIf="cat.subcategorias && cat.subcategorias.length > 0 && isExpanded(cat.id)"
-          class="cat-sub-tree animate-fade-in">
+        <div class="popover-cat-list">
+          <!-- Todas -->
           <button
-            *ngFor="let sub of cat.subcategorias"
             type="button"
-            (click)="selectCategory(sub.id)"
-            class="cat-item cat-sub-item"
-            [class.active]="filters.categoriaId === sub.id">
-            <span class="cat-sub-bullet"></span>
-            <span class="cat-item-text">{{ sub.nombre }}</span>
+            (click)="selectCategory(null); closePopovers()"
+            class="popover-cat-item"
+            [class.active]="filters.categoriaId === null">
+            <span class="material-symbols-rounded item-icon">apps</span>
+            <span>Todas las categorías</span>
           </button>
+
+          <!-- Lista -->
+          <div *ngFor="let cat of categorias" class="popover-cat-group">
+            <!-- Padre con subcategorías -->
+            <div *ngIf="cat.subcategorias && cat.subcategorias.length > 0" class="popover-parent-row"
+                 [class.active]="filters.categoriaId === cat.id">
+              <button
+                type="button"
+                (click)="selectCategory(cat.id)"
+                class="popover-cat-item parent-btn"
+                [class.active]="filters.categoriaId === cat.id">
+                <span class="material-symbols-rounded item-icon">folder_open</span>
+                <span>{{ cat.nombre }}</span>
+              </button>
+              <button
+                type="button"
+                class="popover-chevron-btn"
+                [class.is-expanded]="isExpanded(cat.id)"
+                (click)="toggleExpand(cat.id, $event)">
+                <span class="material-symbols-rounded">
+                  {{ isExpanded(cat.id) ? 'expand_more' : 'chevron_right' }}
+                </span>
+              </button>
+            </div>
+
+            <!-- Subcategorías desplegadas -->
+            <div *ngIf="cat.subcategorias && cat.subcategorias.length > 0 && isExpanded(cat.id)" class="popover-sub-list animate-fade-in">
+              <button
+                *ngFor="let sub of cat.subcategorias"
+                type="button"
+                (click)="selectCategory(sub.id); closePopovers()"
+                class="popover-sub-item"
+                [class.active]="filters.categoriaId === sub.id">
+                <span class="sub-dot"></span>
+                <span>{{ sub.nombre }}</span>
+              </button>
+            </div>
+
+            <!-- Padre sin subcategorías -->
+            <button
+              *ngIf="!cat.subcategorias || cat.subcategorias.length === 0"
+              type="button"
+              (click)="selectCategory(cat.id); closePopovers()"
+              class="popover-cat-item"
+              [class.active]="filters.categoriaId === cat.id">
+              <span class="material-symbols-rounded item-icon">label</span>
+              <span>{{ cat.nombre }}</span>
+            </button>
+          </div>
         </div>
-
-        <!-- Categoría Padre SIN subcategorías (Clickable directa) -->
-        <button
-          *ngIf="!cat.subcategorias || cat.subcategorias.length === 0"
-          type="button"
-          (click)="selectCategory(cat.id)"
-          class="cat-item cat-single-item"
-          [class.active]="filters.categoriaId === cat.id">
-          <span class="cat-item-left">
-            <span class="material-symbols-rounded cat-item-icon">label</span>
-            <span class="cat-item-text">{{ cat.nombre }}</span>
-          </span>
-        </button>
-
       </div>
     </div>
-  </div>
 
-  <!-- Género -->
-  <div class="filter-group">
-    <label class="filter-label">Género</label>
-    <div class="seg-control">
-      <button *ngFor="let gen of ['', 'Hombre', 'Mujer']"
-              (click)="filters.genero = gen; emitFilters()"
-              class="seg-btn" [class.active]="filters.genero === gen">
+    <!-- 3. Dropdown Tallas -->
+    <div class="filter-popover-wrapper">
+      <button
+        type="button"
+        class="filter-trigger-btn"
+        [class.active]="filters.tallaId !== null"
+        [class.is-open]="openPopover === 'talla'"
+        (click)="togglePopover('talla', $event)">
+        <span class="material-symbols-rounded trigger-icon">straighten</span>
+        <span class="trigger-label">
+          {{ filters.tallaId !== null ? 'Talla: ' + getSelectedTallaNombre() : 'Tallas' }}
+        </span>
+        <span class="material-symbols-rounded trigger-arrow">
+          {{ openPopover === 'talla' ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
+
+      <!-- Popover Menu Tallas -->
+      <div class="filter-popover-menu talla-popover animate-scale-in" *ngIf="openPopover === 'talla'">
+        <div class="popover-header">
+          <span class="popover-title">Filtrar por Talla</span>
+          <button *ngIf="filters.tallaId !== null" (click)="clearTalla()" class="popover-clear-btn" type="button">
+            Limpiar
+          </button>
+        </div>
+
+        <div class="popover-talla-body">
+          <span class="talla-section-label">Tipo de prenda:</span>
+          <div class="popover-garment-types">
+            <button
+              type="button"
+              *ngFor="let g of tallaGroups"
+              class="popover-type-pill"
+              [class.active]="selectedGarmentGroupId === g.id"
+              (click)="selectGarmentGroup(g.id)">
+              <span>{{ g.shortName }}</span>
+              <span class="material-symbols-rounded chevron-mini">
+                {{ selectedGarmentGroupId === g.id ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Rejilla de tallas desplegadas -->
+          <div class="popover-talla-grid animate-fade-in" *ngIf="selectedGarmentGroupId !== null">
+            <button
+              *ngFor="let t of activeTallas"
+              type="button"
+              (click)="selectTalla(t.id); closePopovers()"
+              class="popover-talla-btn"
+              [class.active]="filters.tallaId === t.id">
+              {{ t.nombre }}
+            </button>
+          </div>
+
+          <!-- Hint cuando no hay grupo seleccionado -->
+          <div class="popover-talla-hint" *ngIf="selectedGarmentGroupId === null">
+            <span class="material-symbols-rounded hint-icon">touch_app</span>
+            <span>Selecciona un tipo para ver sus tallas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Segmentado Género -->
+    <div class="filter-seg-gender">
+      <button
+        *ngFor="let gen of ['', 'Hombre', 'Mujer']"
+        type="button"
+        (click)="filters.genero = gen; emitFilters()"
+        class="seg-gender-btn"
+        [class.active]="filters.genero === gen">
         {{ gen === '' ? 'Todos' : gen }}
       </button>
     </div>
-  </div>
 
-  <!-- Marcas -->
-  <div class="filter-group">
-    <label class="filter-label">Marca</label>
-    <select [(ngModel)]="filters.marcaId" (change)="emitFilters()" class="filter-select">
-      <option [ngValue]="null">Todas las marcas</option>
-      <option *ngFor="let m of marcas" [ngValue]="m.id">{{ m.nombre }}</option>
-    </select>
-  </div>
-
-  <!-- Tallas -->
-  <div class="filter-group">
-    <div class="talla-header-row">
-      <label class="filter-label">Talla</label>
-      <div class="talla-selected-badge" *ngIf="filters.tallaId !== null">
-        <span>Talla: <strong>{{ getSelectedTallaNombre() }}</strong></span>
-        <button type="button" (click)="clearTalla()" class="clear-talla-btn" title="Quitar filtro de talla">
-          <span class="material-symbols-rounded">close</span>
-        </button>
-      </div>
+    <!-- 5. Marca Select -->
+    <div class="filter-select-wrapper" *ngIf="marcas.length > 0">
+      <select [(ngModel)]="filters.marcaId" (change)="emitFilters()" class="filter-select-control">
+        <option [ngValue]="null">Todas las marcas</option>
+        <option *ngFor="let m of marcas" [ngValue]="m.id">{{ m.nombre }}</option>
+      </select>
     </div>
 
-    <!-- Filtro por Tipo de Prenda -->
-    <div class="tipo-prenda-filter">
-      <span class="tipo-prenda-caption">Tipo de prenda</span>
-      <div class="tipo-prenda-pills">
-        <button
-          type="button"
-          class="tipo-pill"
-          [class.active]="selectedGarmentGroupId === 'ALL'"
-          (click)="selectGarmentGroup('ALL')">
-          Todas
-        </button>
-        <button
-          type="button"
-          *ngFor="let g of tallaGroups"
-          class="tipo-pill"
-          [class.active]="selectedGarmentGroupId === g.id"
-          (click)="selectGarmentGroup(g.id)">
-          {{ g.shortName }}
-        </button>
-      </div>
+    <!-- 6. Ordenar Select -->
+    <div class="filter-select-wrapper">
+      <select [(ngModel)]="filters.sortBy" (change)="emitFilters()" class="filter-select-control">
+        <option value="name-asc">Nombre: A-Z</option>
+        <option value="name-desc">Nombre: Z-A</option>
+        <option value="price-asc">Precio: Menor a Mayor</option>
+        <option value="price-desc">Precio: Mayor a Menor</option>
+      </select>
     </div>
 
-    <!-- Rejilla de Tallas por Grupo Específico -->
-    <div class="talla-grid animate-fade-in" *ngIf="selectedGarmentGroupId !== 'ALL'">
-      <button
-        *ngFor="let t of activeTallas"
-        (click)="selectTalla(t.id)"
-        class="talla-btn"
-        [class.active]="filters.tallaId === t.id"
-        [title]="'Talla ' + t.nombre">
-        {{ t.nombre }}
-      </button>
-    </div>
+    <!-- 7. Reset Button -->
+    <button
+      type="button"
+      *ngIf="hasActiveFilters()"
+      (click)="resetFilters()"
+      class="filter-reset-btn animate-fade-in"
+      title="Restablecer todos los filtros">
+      <span class="material-symbols-rounded">restart_alt</span>
+      <span class="reset-text">Limpiar</span>
+    </button>
 
-    <!-- Rejilla de Tallas Agrupadas si está en 'ALL' (Todas) -->
-    <div class="talla-groups-container animate-fade-in" *ngIf="selectedGarmentGroupId === 'ALL'">
-      <div class="talla-subgroup" *ngFor="let g of tallaGroups">
-        <span class="talla-subgroup-title">{{ g.shortName }}</span>
-        <div class="talla-grid">
-          <button
-            *ngFor="let t of g.tallas"
-            (click)="selectTalla(t.id)"
-            class="talla-btn"
-            [class.active]="filters.tallaId === t.id"
-            [title]="'Talla ' + t.nombre">
-            {{ t.nombre }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <!-- Colores -->
-  <div class="filter-group">
-    <label class="filter-label">Color</label>
-    <div class="color-dots">
-      <button *ngFor="let c of colores" (click)="selectColor(c.id)"
-              [style.background-color]="c.hex"
-              [title]="c.nombre"
-              class="color-dot" [class.selected]="filters.colorId === c.id">
-      </button>
-    </div>
+  <!-- Active Badges Bar (Removibles) -->
+  <div class="active-chips-row animate-fade-in" *ngIf="hasActiveFilters()">
+    <span class="chips-label">Filtros activos:</span>
+
+    <span class="active-chip" *ngIf="filters.searchQuery">
+      <span>"{{ filters.searchQuery }}"</span>
+      <button type="button" (click)="filters.searchQuery = ''; emitFilters()" class="chip-remove">✕</button>
+    </span>
+
+    <span class="active-chip" *ngIf="filters.categoriaId !== null">
+      <span>Categoría: {{ getSelectedCategoryNombre() }}</span>
+      <button type="button" (click)="clearCategory()" class="chip-remove">✕</button>
+    </span>
+
+    <span class="active-chip" *ngIf="filters.tallaId !== null">
+      <span>Talla: {{ getSelectedTallaNombre() }}</span>
+      <button type="button" (click)="clearTalla()" class="chip-remove">✕</button>
+    </span>
+
+    <span class="active-chip" *ngIf="filters.genero">
+      <span>Género: {{ filters.genero }}</span>
+      <button type="button" (click)="filters.genero = ''; emitFilters()" class="chip-remove">✕</button>
+    </span>
+
+    <span class="active-chip" *ngIf="filters.marcaId !== null">
+      <span>Marca: {{ getSelectedMarcaNombre() }}</span>
+      <button type="button" (click)="filters.marcaId = null; emitFilters()" class="chip-remove">✕</button>
+    </span>
+
+    <button type="button" (click)="resetFilters()" class="chip-clear-all">
+      Limpiar todos
+    </button>
   </div>
 
-  <!-- Telas -->
-  <div class="filter-group">
-    <label class="filter-label">Material / Tela</label>
-    <select [(ngModel)]="filters.telaId" (change)="emitFilters()" class="filter-select">
-      <option [ngValue]="null">Todos los materiales</option>
-      <option *ngFor="let t of telas" [ngValue]="t.id">{{ t.nombre }}</option>
-    </select>
-  </div>
-
-  <!-- Precios -->
-  <div class="filter-group">
-    <label class="filter-label">Rango de Precios (COP)</label>
-    <div class="price-range">
-      <input type="number" [(ngModel)]="filters.minPrice" (input)="emitFilters()"
-             placeholder="Mín" class="filter-input price-input">
-      <input type="number" [(ngModel)]="filters.maxPrice" (input)="emitFilters()"
-             placeholder="Máx" class="filter-input price-input">
-    </div>
-  </div>
-
-</aside>
+</div>

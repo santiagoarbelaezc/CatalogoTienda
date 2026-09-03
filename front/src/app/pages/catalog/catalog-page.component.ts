@@ -1,5 +1,6 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CatalogFiltersComponent, CatalogFilters } from '../../components/catalog-filters/catalog-filters.component';
 import { ProductCardComponent } from '../../components/product-card/product-card.component';
@@ -25,12 +26,53 @@ interface HeroImageItem {
 @Component({
   selector: 'app-catalog-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, CatalogFiltersComponent, ProductCardComponent, CartInquiryComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CatalogFiltersComponent, ProductCardComponent, CartInquiryComponent],
   templateUrl: './catalog-page.component.html',
   styleUrls: ['./catalog-page.component.scss']
 })
 export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
+
+  searchQuery = '';
+  isScrolled = false;
+
+  promoAnnouncements: { text: string; icon: string }[] = [
+    { text: 'Envíos a todo Calarcá, Quindío', icon: 'local_shipping' },
+    { text: 'Promo especial: compra con nosotros y obtén un descuento por tu primera compra', icon: 'local_offer' }
+  ];
+  currentPromoIndex = 0;
+  private promoInterval?: ReturnType<typeof setInterval>;
+
+  @HostListener('window:scroll', [])
+  onWindowScroll(): void {
+    this.isScrolled = window.scrollY > 15;
+  }
+
+  onNavSearchInput(): void {
+    if (this.activeFilters) {
+      this.activeFilters.searchQuery = this.searchQuery;
+      this.handleFiltersChanged({ ...this.activeFilters });
+    }
+  }
+
+  clearNavSearch(): void {
+    this.searchQuery = '';
+    this.onNavSearchInput();
+  }
+
+  startPromoRotation(): void {
+    this.stopPromoRotation();
+    this.promoInterval = setInterval(() => {
+      this.currentPromoIndex = (this.currentPromoIndex + 1) % this.promoAnnouncements.length;
+    }, 4500);
+  }
+
+  stopPromoRotation(): void {
+    if (this.promoInterval) {
+      clearInterval(this.promoInterval);
+      this.promoInterval = undefined;
+    }
+  }
 
   readonly items: HeroImageItem[] = [
     {
@@ -81,7 +123,11 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   allProducts: Producto[] = [];
   filteredProducts: Producto[] = [];
   inquiryItems: InquiryItem[] = [];
-  activeFilters!: CatalogFilters;
+  activeFilters: CatalogFilters = {
+    searchQuery: '', categoriaId: null, marcaId: null, genero: '',
+    temporada: '', telaId: null, colorId: null, tallaId: null,
+    minPrice: null, maxPrice: null, sortBy: 'name-asc'
+  };
 
   constructor(
     private catalogService: CatalogService,
@@ -89,6 +135,7 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.startPromoRotation();
     this.catalogService.products$.subscribe(products => {
       this.allProducts = products;
       if (this.activeFilters) {
@@ -108,6 +155,7 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopAutoplay();
+    this.stopPromoRotation();
   }
 
   scrollToSlide(index: number): void {
@@ -125,7 +173,7 @@ export class CatalogPageComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   handleFiltersChanged(filters: CatalogFilters) {
-    this.activeFilters = filters;
+    this.activeFilters = { ...filters, searchQuery: this.searchQuery };
     let result = [...this.allProducts];
 
     if (filters.searchQuery) {

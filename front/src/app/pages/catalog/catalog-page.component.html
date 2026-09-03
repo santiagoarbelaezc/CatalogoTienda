@@ -1,129 +1,71 @@
-<!-- Top Announcement Bar -->
-<div class="top-promo-bar">
-  <p class="top-promo-text">PROMO ESPECIAL: 10% OFF EN TU PRIMERA COMPRA</p>
-</div>
+<!-- STICKY HEADER & FILTERS UNIFIED STACK -->
+<div class="sticky-header-stack" [class.is-scrolled]="isScrolled">
 
-<!-- Header / Navbar Overlay -->
-<header class="catalog-header">
-  <div class="header-brand">
-    <img src="assets/icons/logo-tiendaintima.png" alt="Tiendaintima" class="brand-logo-img" />
-    <div class="brand-text-wrap">
-      <h1 class="brand-name">Tiendaintima</h1>
-      <span class="brand-sub">MODA ÍNTIMA Y DESCANSO</span>
+  <!-- 1. Top Announcement Bar (Sticky, no se esconde con el scroll) -->
+  <div class="top-promo-bar">
+    <div class="promo-content-wrapper animate-fade-in" *ngIf="promoAnnouncements[currentPromoIndex]">
+      <span class="material-symbols-rounded promo-icon">{{ promoAnnouncements[currentPromoIndex].icon }}</span>
+      <p class="top-promo-text">{{ promoAnnouncements[currentPromoIndex].text }}</p>
     </div>
   </div>
 
-  <nav class="header-nav">
-    <a (click)="scrollToCatalog()" class="nav-link active">Catálogo</a>
-  </nav>
-
-  <div class="header-right">
-    <a *ngIf="auth.isAuthenticated()" routerLink="/admin/dashboard" class="nav-pill-btn nav-pill-btn--admin" id="nav-admin-btn" title="Ir al panel de administración">
-      <span class="material-symbols-rounded" style="font-size: 1.1rem;">dashboard</span>
-      Panel Admin
-    </a>
-    <a *ngIf="!auth.isAuthenticated()" routerLink="/admin/login" class="nav-pill-btn nav-pill-btn--account" id="nav-login-btn">
-      <span class="material-symbols-rounded" style="font-size: 1.1rem;">login</span>
-      Ingresar
-    </a>
-  </div>
-</header>
-
-<!-- Hero Section (Desactivado temporalmente) -->
-<!--
-<section class="hero-shell" id="hero-section">
-  <div
-    #scrollContainer
-    (scroll)="onScroll()"
-    class="carousel-track-container"
-  >
-    <div class="carousel-track">
-      <div
-        *ngFor="let item of items; let i = index"
-        [id]="'slide-' + i"
-        class="hero-slide"
-      >
-        <div class="hero-images">
-          <div class="hero-image-panel hero-image-panel--primary">
-            <img
-              [src]="item.img"
-              [alt]="item.titleLine1 + ' ' + item.titleLine2"
-              class="hero-image"
-              loading="eager"
-            />
-          </div>
-          <div class="hero-image-panel hero-image-panel--secondary">
-            <img
-              [src]="item.img2"
-              [alt]="item.titleLine1 + ' ' + item.titleLine2"
-              class="hero-image"
-              loading="eager"
-            />
-          </div>
-        </div>
-
-        <div class="hero-overlay"></div>
-
-        <div class="hero-copy-wrap">
-          <div class="hero-copy">
-            <p class="hero-promo-tag">{{ item.kicker }}</p>
-
-            <h2 class="hero-title">
-              <span class="hero-title-line">{{ item.titleLine1 }}</span>
-              <span class="hero-title-line">{{ item.titleLine2 }}</span>
-            </h2>
-
-            <p class="hero-subtitle">
-              <em>{{ item.subtitle }}</em>
-            </p>
-
-            <p class="hero-description">{{ item.description }}</p>
-
-            <div class="hero-promo-badge">
-              <span class="hero-promo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V15a1 1 0 01-1 1h-1" />
-                </svg>
-              </span>
-              <span class="hero-promo-text-wrap">
-                <span class="hero-promo-kicker">{{ item.promoBadgeLabel }}</span>
-                <span class="hero-promo-text">{{ item.promoBadgeText }}</span>
-              </span>
-            </div>
-
-            <a (click)="scrollToCatalog()" class="hero-cta">
-              {{ item.ctaText }}
-            </a>
-          </div>
-        </div>
+  <!-- 2. Header / Navbar Overlay -->
+  <header class="catalog-header">
+    <div class="header-brand" (click)="scrollToCatalog()" title="Ir al inicio del catálogo">
+      <img src="assets/icons/logo-tiendaintima.png" alt="Tiendaintima" class="brand-logo-img" />
+      <div class="brand-text-wrap">
+        <h1 class="brand-name">Tiendaintima</h1>
+        <span class="brand-sub">MODA ÍNTIMA Y DESCANSO</span>
       </div>
     </div>
+
+    <!-- Buscador Integrado en el Navbar -->
+    <div class="navbar-search-container">
+      <div class="navbar-search-box">
+        <span class="material-symbols-rounded search-icon">search</span>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (input)="onNavSearchInput()"
+          placeholder="Buscar prendas, referencias, tallas..."
+          class="navbar-search-input"
+          id="navbar-search-input"
+        />
+        <button
+          *ngIf="searchQuery"
+          (click)="clearNavSearch()"
+          class="search-clear-btn"
+          type="button"
+          title="Limpiar búsqueda">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <a *ngIf="auth.isAuthenticated()" routerLink="/admin/dashboard" class="nav-pill-btn nav-pill-btn--admin" id="nav-admin-btn" title="Ir al panel de administración">
+        <span class="material-symbols-rounded" style="font-size: 1.1rem;">dashboard</span>
+        <span>Panel Admin</span>
+      </a>
+      <a *ngIf="!auth.isAuthenticated()" routerLink="/admin/login" class="nav-pill-btn nav-pill-btn--account" id="nav-login-btn">
+        <span class="material-symbols-rounded" style="font-size: 1.1rem;">login</span>
+        <span>Ingresar</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- 3. Subnav Filters (Directamente pegado al navbar sin espacio vacío) -->
+  <div class="catalog-subnav-filters">
+    <div class="subnav-filters-inner">
+      <app-catalog-filters (filtersChanged)="handleFiltersChanged($event)"></app-catalog-filters>
+    </div>
   </div>
 
-  <div class="hero-dots">
-    <button
-      *ngFor="let dot of items; let i = index"
-      (click)="scrollToSlide(i)"
-      [ngClass]="{
-        'is-active': i === currentSlide
-      }"
-      class="hero-dot"
-      type="button"
-      [attr.aria-label]="'Ir a la diapositiva ' + (i + 1)"
-    ></button>
-  </div>
-</section>
--->
+</div>
 
-<!-- Catalog Section -->
+<!-- Catalog Main Section -->
 <main class="catalog-main" id="catalog-section">
   <section class="catalog-section">
-
-    <app-catalog-filters
-      (filtersChanged)="handleFiltersChanged($event)"
-      class="filters-col">
-    </app-catalog-filters>
 
     <div class="products-col">
       <div class="products-toolbar">

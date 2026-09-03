@@ -1,49 +1,127 @@
-/* ─── Top Announcement Bar ───────────────────────────────── */
+/* ─── Unified Sticky Header Stack (Sin Espacio Vacío) ─────────────── */
+.sticky-header-stack {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+
+  &.is-scrolled {
+    .catalog-header {
+      height: 58px;
+      background: rgba(10, 10, 10, 0.96);
+    }
+  }
+}
+
+/* 1. Top Announcement Bar */
 .top-promo-bar {
   width: 100%;
-  background: #111111;
+  height: 34px;
+  background: #000000;
   color: #ffffff;
-  text-align: center;
-  padding: 0.55rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.promo-content-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  .promo-icon {
+    font-size: 1.05rem;
+    color: #eac7d2;
+    flex-shrink: 0;
+  }
 
   .top-promo-text {
     margin: 0;
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
-/* ─── Catalog Header / Navbar ───────────────────────────── */
+/* 2. Main Navbar */
 .catalog-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: rgba(18, 18, 18, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  height: 66px;
+  background: rgba(15, 15, 15, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.75rem 2rem;
+  padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    height: auto;
+    padding: 0.65rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+}
+
+/* 3. Subnav Filters (Directamente pegado al final del navbar) */
+.catalog-subnav-filters {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.55rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+
+  @media (max-width: 768px) {
+    padding: 0.45rem 0.75rem;
+  }
+}
+
+.subnav-filters-inner {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
 
   .brand-logo-img {
-    height: 42px;
+    height: 40px;
     width: auto;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+    transition: height 0.3s ease;
   }
 
   .brand-text-wrap {
@@ -70,44 +148,77 @@
   }
 }
 
-.header-nav {
-  display: flex;
-  align-items: center;
-  gap: 2.25rem;
+/* Buscador Integrado en el Navbar */
+.navbar-search-container {
+  flex: 1 1 320px;
+  max-width: 480px;
+  margin: 0 1rem;
 
-  @media (max-width: 960px) {
-    display: none;
+  @media (max-width: 768px) {
+    order: 3;
+    flex-basis: 100%;
+    max-width: 100%;
+    margin: 0;
   }
 }
 
-.nav-link {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  position: relative;
-  padding: 0.25rem 0;
-  transition: color 0.2s ease;
+.navbar-search-box {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  padding: 0.45rem 1rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
 
-  &:hover, &.active {
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+  }
+
+  .search-icon {
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+  }
+
+  .navbar-search-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 0.825rem;
+    font-weight: 500;
     color: #ffffff;
+    outline: none;
+    font-family: inherit;
 
-    &::after {
-      width: 100%;
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.65);
     }
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: #eac7d2;
-    transition: width 0.25s ease;
+  .search-clear-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+
+    &:hover { color: #ffffff; }
+    .material-symbols-rounded { font-size: 1.05rem; }
   }
 }
 
@@ -545,6 +656,8 @@
   font-weight: 400;
 }
 
+
+
 /* ─── Catalog main ─────────────────────────────────────── */
 .catalog-main {
   min-height: calc(100vh - 60px);
@@ -555,29 +668,20 @@
 .catalog-section {
   max-width: 1800px;
   margin: 0 auto;
-  padding: 2rem 2.5rem;
+  padding: 1.75rem 2.5rem 3rem;
   display: flex;
-  gap: 2rem;
+  flex-direction: column;
 
   @media (max-width: 1024px) {
-    padding: 1.5rem 1rem;
-    flex-direction: column;
+    padding: 1.25rem 1rem 2rem;
   }
 }
 
-.filters-col {
-  flex-shrink: 0;
-  position: sticky;
-  top: 90px;
-  align-self: flex-start;
-}
-
 .products-col {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
+  gap: 1.25rem;
 }
 
 .products-toolbar {
@@ -615,7 +719,7 @@
 .product-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1.75rem;
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
@@ -623,6 +727,10 @@
 
   @media (min-width: 1024px) {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (min-width: 1440px) {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 

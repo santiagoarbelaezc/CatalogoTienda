@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Categoria, Marca, Tela, Color, Talla } from '../../models/catalog.models';
@@ -38,7 +38,8 @@ export class CatalogFiltersComponent implements OnInit {
   tallas: Talla[] = TALLAS;
   tallaGroups: TallaGroup[] = [];
 
-  selectedGarmentGroupId: string = 'ALL';
+  selectedGarmentGroupId: string | null = null;
+  openPopover: 'categoria' | 'talla' | null = null;
 
   filters: CatalogFilters = {
     searchQuery: '', categoriaId: null, marcaId: null, genero: '',
@@ -53,6 +54,39 @@ export class CatalogFiltersComponent implements OnInit {
     private tallasService: TallasService,
     private categoriesService: CategoriesService
   ) {}
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.filter-popover-wrapper')) {
+      this.openPopover = null;
+    }
+  }
+
+  togglePopover(name: 'categoria' | 'talla', event: Event): void {
+    event.stopPropagation();
+    this.openPopover = this.openPopover === name ? null : name;
+  }
+
+  closePopovers(): void {
+    this.openPopover = null;
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(
+      this.filters.searchQuery ||
+      this.filters.categoriaId !== null ||
+      this.filters.marcaId !== null ||
+      this.filters.genero ||
+      this.filters.tallaId !== null
+    );
+  }
+
+  getSelectedMarcaNombre(): string {
+    if (this.filters.marcaId === null) return '';
+    const m = this.marcas.find(x => x.id === this.filters.marcaId);
+    return m ? m.nombre : '';
+  }
 
   ngOnInit() {
     this.brandsService.brands$.subscribe(list => this.marcas = list);
@@ -124,23 +158,28 @@ export class CatalogFiltersComponent implements OnInit {
   selectColor(id: number | null) { this.filters.colorId = this.filters.colorId === id ? null : id; this.emitFilters(); }
 
   selectGarmentGroup(groupId: string): void {
-    this.selectedGarmentGroupId = groupId;
-    // Si la talla actualmente seleccionada no pertenece al grupo elegido, deseleccionar para no dejar filtro invisible
-    if (this.filters.tallaId !== null && groupId !== 'ALL') {
-      const activeGroup = this.tallaGroups.find(g => g.id === groupId);
-      if (activeGroup && !activeGroup.tallas.some(t => t.id === this.filters.tallaId)) {
-        this.filters.tallaId = null;
-        this.emitFilters();
+    if (this.selectedGarmentGroupId === groupId) {
+      // Toggle: Si vuelve a presionar el mismo grupo, lo colapsa/oculta
+      this.selectedGarmentGroupId = null;
+    } else {
+      this.selectedGarmentGroupId = groupId;
+      // Si la talla seleccionada no pertenece al nuevo grupo, deseleccionar
+      if (this.filters.tallaId !== null) {
+        const activeGroup = this.tallaGroups.find(g => g.id === groupId);
+        if (activeGroup && !activeGroup.tallas.some(t => t.id === this.filters.tallaId)) {
+          this.filters.tallaId = null;
+          this.emitFilters();
+        }
       }
     }
   }
 
   get activeTallas(): Talla[] {
-    if (this.selectedGarmentGroupId === 'ALL') {
-      return this.tallas;
+    if (!this.selectedGarmentGroupId) {
+      return [];
     }
     const group = this.tallaGroups.find(g => g.id === this.selectedGarmentGroupId);
-    return group ? group.tallas : this.tallas;
+    return group ? group.tallas : [];
   }
 
   getSelectedTallaNombre(): string {
@@ -160,7 +199,7 @@ export class CatalogFiltersComponent implements OnInit {
   }
 
   resetFilters() {
-    this.selectedGarmentGroupId = 'ALL';
+    this.selectedGarmentGroupId = null;
     this.expandedCategoryIds.clear();
     this.filters = {
       searchQuery: '', categoriaId: null, marcaId: null, genero: '',
