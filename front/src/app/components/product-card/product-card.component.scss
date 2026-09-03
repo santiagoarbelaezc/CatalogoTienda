@@ -64,10 +64,10 @@
 .tag {
   padding: 0.3rem 0.8rem;
   border-radius: 9999px;
-  font-size: 0.625rem;
-  font-weight: 800;
+  font-size: 0.65rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
 }
 
 .tag-bestseller {
@@ -144,19 +144,19 @@
 }
 
 .category-kicker {
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #000000;
+  color: #71717a;
 }
 
 .brand-kicker {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #000000;
+  color: #27272a;
   background: #f4f4f5;
   padding: 0.15rem 0.5rem;
   border-radius: 0.25rem;
@@ -164,12 +164,12 @@
 }
 
 .product-name {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #000000;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #18181b;
   margin: 0;
-  line-height: 1.35;
-  letter-spacing: -0.015em;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
   min-height: 2.5rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -193,10 +193,10 @@
 }
 
 .variants-label {
-  font-size: 0.6875rem;
-  font-weight: 800;
+  font-size: 0.7rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   color: #71717a;
 }
 
@@ -217,16 +217,16 @@
 .talla-chip {
   padding: 0.25rem 0.65rem;
   border-radius: 0.4rem;
-  border: 1.5px solid #d4d4d8;
+  border: 1px solid #e4e4e7;
   background: #ffffff;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #000000;
+  font-weight: 500;
+  color: #27272a;
   cursor: pointer;
   transition: all 0.15s ease;
 
-  &:hover { border-color: #000000; color: #000000; background: #f4f4f5; }
-  &.active { background: #000000; color: #ffffff; border-color: #000000; }
+  &:hover { border-color: #18181b; color: #18181b; background: #f4f4f5; }
+  &.active { background: #18181b; color: #ffffff; border-color: #18181b; font-weight: 600; }
   &.disabled { opacity: 0.35; }
 }
 
@@ -251,18 +251,18 @@
 }
 
 .price-label-prefix {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #71717a;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #a1a1aa;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
 }
 
 .price-val {
-  font-size: 1.8rem;
-  font-weight: 900;
-  color: #000000;
-  letter-spacing: -0.03em;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #18181b;
+  letter-spacing: -0.02em;
 }
 
 .action-row {
@@ -282,9 +282,9 @@
   color: #ffffff;
   border: none;
   border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
