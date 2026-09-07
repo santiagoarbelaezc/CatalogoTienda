@@ -37,9 +37,9 @@ cp .env.example .env
 
 ## Ejecutar la base de datos
 
-En **phpMyAdmin de Hostinger** (`https://auth-db1660.hstgr.io`):
+En **phpMyAdmin**:
 
-1. Selecciona la BD `u941842000_tiendabd`
+1. Selecciona tu base de datos configurada en `.env`
 2. Pestaña **SQL**
 3. Copia y ejecuta en orden:
    - `sql/01_schema.sql` → crea las 11 tablas
@@ -90,7 +90,7 @@ El resto de archivos (`src/`, `vendor/`, `.env`, `composer.json`) van en un dire
 
 Actualizar la línea en `public/index.php`:
 ```php
-define('BASE_PATH', '/home/u941842000/catalogo-backend');
+define('BASE_PATH', '/home/<usuario>/catalogo-backend');
 ```
 
 ### Opción B — Todo en `public_html/api/` (más simple, menos seguro)
@@ -104,7 +104,7 @@ Subir toda la carpeta `backend-php/` como `public_html/api/` y asegurarse de que
 Hostinger permite SSH en planes Business/Cloud. Si tienes acceso:
 
 ```bash
-ssh u941842000@tiendaintima.com
+ssh <usuario>@<tu-dominio.com>
 cd ~/catalogo-backend
 composer install --no-dev --optimize-autoloader
 ```
@@ -131,7 +131,7 @@ GET  /api/tallas
 
 ```http
 POST   /api/auth/login
-       Body: {"email": "admin@tiendaintima.com", "password": "Admin2024!"}
+       Body: {"email": "admin@ejemplo.com", "password": "tu_password_seguro"}
 
 GET    /api/auth/me
 
@@ -147,17 +147,6 @@ PUT    /api/admin/variantes/1
 DELETE /api/admin/variantes/1
 GET    /api/admin/variantes/low-stock?threshold=5
 ```
-
----
-
-## Credenciales del admin por defecto
-
-| Campo    | Valor                       |
-|----------|-----------------------------|
-| Email    | admin@tiendaintima.com      |
-| Password | Admin2024!                  |
-
-> 🔴 **Cambiar en producción** — el hash bcrypt en `02_seed.sql` corresponde a esta contraseña.
 
 ---
 

@@ -33,7 +33,7 @@ class Analytics extends BaseModel
         try {
             $this->pdo->exec($sql);
         } catch (\Throwable $e) {
-            // Ignorar en entornos de solo lectura
+            // Silencioso si la tabla ya existe
         }
     }
 
@@ -53,21 +53,46 @@ class Analytics extends BaseModel
     }
 
     /**
-     * Retorna los KPIs principales para el tablero de administración.
+     * Retorna los KPIs principales calculados 100% con datos reales de la BD.
      */
     public function getKpis(): array
     {
-        // 1. Total Productos y Precio Promedio
-        $prodStats = $this->fetchOne("SELECT COUNT(*) as total_prod, AVG(precio_base) as avg_price FROM productos WHERE activo = 1") ?? [];
-        $totalProd = (int) ($prodStats['total_prod'] ?? 0);
-        $avgPrice  = (float) ($prodStats['avg_price'] ?? 0);
+        // 1. Estadísticas de productos (Totales y Activos)
+        $prodStats = $this->fetchOne("
+            SELECT 
+                COUNT(*) as total_prod,
+                SUM(CASE WHEN activo = 1 THEN 1 ELSE 0 END) as active_prod,
+                AVG(precio_base) as avg_price
+            FROM productos
+        ") ?? [];
+        $totalProd  = (int) ($prodStats['total_prod'] ?? 0);
+        $activeProd = (int) ($prodStats['active_prod'] ?? 0);
+        $avgPrice   = (float) ($prodStats['avg_price'] ?? 0);
 
-        // 2. Total Stock Global
-        $stockStats = $this->fetchOne("SELECT SUM(stock) as total_stock, AVG(precio) as avg_variant_price FROM variantes") ?? [];
-        $totalStock = (int) ($stockStats['total_stock'] ?? 0);
+        // 2. Estadísticas de variantes y valorización real del inventario
+        $stockStats = $this->fetchOne("
+            SELECT 
+                COUNT(v.id) as total_variants,
+                COALESCE(SUM(v.stock), 0) as total_stock,
+                COALESCE(SUM(v.stock * COALESCE(NULLIF(v.precio, 0), p.precio_base, 0)), 0) as total_inventory_value,
+                COALESCE(AVG(COALESCE(NULLIF(v.precio, 0), p.precio_base, 0)), 0) as avg_variant_price,
+                SUM(CASE WHEN v.stock <= 5 THEN 1 ELSE 0 END) as low_stock_count
+            FROM variantes v
+            LEFT JOIN productos p ON p.id = v.id_producto
+        ") ?? [];
+
+        $totalVariants   = (int) ($stockStats['total_variants'] ?? 0);
+        $totalStock      = (int) ($stockStats['total_stock'] ?? 0);
+        $inventoryValue  = (float) ($stockStats['total_inventory_value'] ?? 0);
         $avgVariantPrice = (float) ($stockStats['avg_variant_price'] ?? $avgPrice);
+        $lowStockCount   = (int) ($stockStats['low_stock_count'] ?? 0);
 
-        // 3. Cotizaciones de esta semana vs semana anterior
+        // 3. Conteo de Categorías y Marcas
+        $catCount   = (int) ($this->fetchOne("SELECT COUNT(*) as c FROM categorias")['c'] ?? 0);
+        $brandCount = (int) ($this->fetchOne("SELECT COUNT(*) as c FROM marcas")['c'] ?? 0);
+
+        // 4. Cotizaciones WhatsApp (Total y comparación últimos 7 días vs 7 días anteriores)
+        $totalInquiries    = $this->count("SELECT COUNT(*) FROM analytics_events");
         $inquiriesThisWeek = $this->count("SELECT COUNT(*) FROM analytics_events WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
         $inquiriesLastWeek = $this->count("SELECT COUNT(*) FROM analytics_events WHERE created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
 
@@ -78,46 +103,59 @@ class Analytics extends BaseModel
             $trend = 100.0;
         }
 
-        // Tasa de conversión calculada o de referencia
-        $conversionRate = $totalProd > 0 ? min(35.0, round(($inquiriesThisWeek / max(1, $totalProd * 5)) * 100, 1)) : 18.5;
-        if ($conversionRate <= 0) {
-            $conversionRate = 18.5;
-        }
-
         return [
             [
-                'title' => 'Tasa de Conversión (WA)',
-                'value' => "{$conversionRate}%",
-                'icon' => 'trending_up',
-                'trend' => $trend >= 0 ? $trend : -abs($trend),
-                'trendLabel' => 'vs semana anterior'
+                'title'      => 'Total Productos en Catálogo',
+                'value'      => (string) $totalProd,
+                'icon'       => 'inventory_2',
+                'trend'      => $totalProd > 0 ? round(($activeProd / max(1, $totalProd)) * 100, 1) : 0,
+                'trendLabel' => "{$activeProd} activos en tienda",
+                'raw'        => [
+                    'total'      => $totalProd,
+                    'activos'    => $activeProd,
+                    'categorias' => $catCount,
+                    'marcas'     => $brandCount
+                ]
             ],
             [
-                'title' => 'Cotizaciones Generadas',
-                'value' => (string) max($inquiriesThisWeek, max(342, (int)($totalStock * 0.8))),
-                'icon' => 'chat',
-                'trend' => 14.2,
-                'trendLabel' => 'vs semana anterior'
+                'title'      => 'Valorización del Inventario',
+                'value'      => '$ ' . number_format($inventoryValue, 0, ',', '.'),
+                'icon'       => 'paid',
+                'trend'      => $totalVariants,
+                'trendLabel' => "en {$totalVariants} variantes",
+                'raw'        => [
+                    'valor_total'   => $inventoryValue,
+                    'promedio_item' => $avgVariantPrice
+                ]
             ],
             [
-                'title' => 'Tiempo Promedio en Catálogo',
-                'value' => '4m 15s',
-                'icon' => 'timer',
-                'trend' => 8.5,
-                'trendLabel' => 'vs semana anterior'
+                'title'      => 'Existencias Totales (Stock)',
+                'value'      => number_format($totalStock, 0, ',', '.'),
+                'icon'       => 'stacked_bar_chart',
+                'trend'      => $lowStockCount > 0 ? -$lowStockCount : 0,
+                'trendLabel' => $lowStockCount > 0 ? "{$lowStockCount} variantes bajo stock" : "Stock saludable",
+                'raw'        => [
+                    'stock_total' => $totalStock,
+                    'bajo_stock'  => $lowStockCount
+                ]
             ],
             [
-                'title' => 'Valor Promedio Cotizado',
-                'value' => '$ ' . number_format($avgVariantPrice > 0 ? $avgVariantPrice : 189000, 0, ',', '.'),
-                'icon' => 'paid',
-                'trend' => 1.2,
-                'trendLabel' => 'vs semana anterior'
+                'title'      => 'Cotizaciones WhatsApp',
+                'value'      => (string) $totalInquiries,
+                'icon'       => 'chat',
+                'trend'      => $trend,
+                'trendLabel' => $inquiriesThisWeek > 0 ? "{$inquiriesThisWeek} esta semana" : "sin eventos recientes",
+                'raw'        => [
+                    'total'       => $totalInquiries,
+                    'esta_semana' => $inquiriesThisWeek,
+                    'semana_ant'  => $inquiriesLastWeek
+                ]
             ]
         ];
     }
 
     /**
-     * Distribución de productos por categoría.
+     * Distribución real de productos por categoría.
      */
     public function getCategoryDistribution(): array
     {
@@ -125,8 +163,7 @@ class Analytics extends BaseModel
                 FROM categorias c
                 LEFT JOIN productos p ON p.id_categoria = c.id
                 GROUP BY c.id, c.nombre
-                HAVING total_products > 0
-                ORDER BY total_products DESC";
+                ORDER BY total_products DESC, c.nombre ASC";
         
         $rows = $this->fetchAll($sql);
         
@@ -138,9 +175,31 @@ class Analytics extends BaseModel
             $data[]   = (int) $row['total_products'];
         }
 
-        if (empty($labels)) {
-            $labels = ['Pijamas', 'Lencería', 'Accesorios'];
-            $data   = [12, 8, 4];
+        return [
+            'labels' => $labels,
+            'data'   => $data
+        ];
+    }
+
+    /**
+     * Distribución real de productos por marca.
+     */
+    public function getBrandDistribution(): array
+    {
+        $sql = "SELECT m.nombre as brand_name, COUNT(p.id) as total_products
+                FROM marcas m
+                LEFT JOIN productos p ON p.id_marca = m.id
+                GROUP BY m.id, m.nombre
+                ORDER BY total_products DESC, m.nombre ASC";
+        
+        $rows = $this->fetchAll($sql);
+        
+        $labels = [];
+        $data   = [];
+
+        foreach ($rows as $row) {
+            $labels[] = $row['brand_name'];
+            $data[]   = (int) $row['total_products'];
         }
 
         return [
@@ -150,61 +209,115 @@ class Analytics extends BaseModel
     }
 
     /**
-     * Cotizaciones por día de la semana actual.
+     * Distribución real de productos por género.
      */
-    public function getQuotesByDay(): array
+    public function getGenderDistribution(): array
     {
-        $days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-        $data = [42, 58, 65, 50, 78, 92, 64]; // Valores por defecto estilizados
+        $sql = "SELECT 
+                    CASE 
+                        WHEN genero = 'Femenino' THEN 'Femenino'
+                        WHEN genero = 'Masculino' THEN 'Masculino'
+                        WHEN genero = 'Unisex' THEN 'Unisex'
+                        ELSE 'Sin Definir'
+                    END as gender_name,
+                    COUNT(*) as total_products
+                FROM productos
+                GROUP BY gender_name
+                ORDER BY total_products DESC";
+        
+        $rows = $this->fetchAll($sql);
+        
+        $labels = [];
+        $data   = [];
 
-        try {
-            $sql = "SELECT WEEKDAY(created_at) as day_index, COUNT(*) as total
-                    FROM analytics_events
-                    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                    GROUP BY WEEKDAY(created_at)";
-            $rows = $this->fetchAll($sql);
-            
-            if (!empty($rows)) {
-                $counts = array_fill(0, 7, 0);
-                foreach ($rows as $r) {
-                    $idx = (int) $r['day_index'];
-                    if ($idx >= 0 && $idx < 7) {
-                        $counts[$idx] = (int) $r['total'];
-                    }
-                }
-                $data = $counts;
-            }
-        } catch (\Throwable $e) {
-            // Retornar defaults si no hay eventos
+        foreach ($rows as $row) {
+            $labels[] = $row['gender_name'];
+            $data[]   = (int) $row['total_products'];
         }
 
         return [
-            'labels' => $days,
+            'labels' => $labels,
             'data'   => $data
         ];
     }
 
     /**
-     * Lista de variantes más consultadas.
+     * Cotizaciones reales agrupadas por los últimos 7 días continuos.
      */
-    public function getTopVariants(int $limit = 6): array
+    public function getQuotesByDay(): array
+    {
+        $daysEs = [
+            'Mon' => 'Lun',
+            'Tue' => 'Mar',
+            'Wed' => 'Mié',
+            'Thu' => 'Jue',
+            'Fri' => 'Vie',
+            'Sat' => 'Sáb',
+            'Sun' => 'Dom'
+        ];
+
+        // Construir últimos 7 días
+        $labels = [];
+        $dateKeys = [];
+        $data = [];
+
+        for ($i = 6; $i >= 0; $i--) {
+            $dt = new \DateTime("-{$i} days");
+            $key = $dt->format('Y-m-d');
+            $dayName = $daysEs[$dt->format('D')] ?? $dt->format('D');
+            $dayNum = $dt->format('d');
+
+            $labels[] = "{$dayName} {$dayNum}";
+            $dateKeys[$key] = count($labels) - 1;
+            $data[] = 0;
+        }
+
+        try {
+            $sql = "SELECT DATE(created_at) as event_date, COUNT(*) as total
+                    FROM analytics_events
+                    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                    GROUP BY DATE(created_at)";
+            $rows = $this->fetchAll($sql);
+            
+            foreach ($rows as $r) {
+                $d = (string) $r['event_date'];
+                if (isset($dateKeys[$d])) {
+                    $idx = $dateKeys[$d];
+                    $data[$idx] = (int) $r['total'];
+                }
+            }
+        } catch (\Throwable $e) {
+            // Mantiene el arreglo de ceros reales
+        }
+
+        return [
+            'labels' => $labels,
+            'data'   => $data
+        ];
+    }
+
+    /**
+     * Lista real de variantes más consultadas o con mayor actividad.
+     */
+    public function getTopVariants(int $limit = 8): array
     {
         $sql = "SELECT 
+                    v.id as varianteId,
                     p.nombre as productoNombre,
                     v.sku,
-                    c.hex as colorHex,
-                    c.nombre as colorNombre,
-                    t.nombre as talla,
+                    COALESCE(c.hex, '#666666') as colorHex,
+                    COALESCE(c.nombre, 'Único') as colorNombre,
+                    COALESCE(t.nombre, 'Única') as talla,
                     v.stock,
-                    v.precio,
+                    COALESCE(NULLIF(v.precio, 0), p.precio_base, 0) as precio,
                     COUNT(ae.id) as inquiries
                 FROM variantes v
                 JOIN productos p ON p.id = v.id_producto
-                JOIN colores c ON c.id = v.id_color
-                JOIN tallas t ON t.id = v.id_talla
+                LEFT JOIN colores c ON c.id = v.id_color
+                LEFT JOIN tallas t ON t.id = v.id_talla
                 LEFT JOIN analytics_events ae ON ae.variante_id = v.id
-                GROUP BY v.id, p.nombre, v.sku, c.hex, c.nombre, t.nombre, v.stock, v.precio
-                ORDER BY inquiries DESC, v.stock DESC
+                GROUP BY v.id, p.nombre, v.sku, c.hex, c.nombre, t.nombre, v.stock, v.precio, p.precio_base
+                ORDER BY inquiries DESC, v.stock DESC, p.id DESC
                 LIMIT :limit";
         
         $rows = $this->fetchAll($sql, ['limit' => $limit]);
@@ -212,23 +325,60 @@ class Analytics extends BaseModel
         $result = [];
         foreach ($rows as $row) {
             $inq = (int) ($row['inquiries'] ?? 0);
-            if ($inq === 0) {
-                $inq = (int) (($row['precio'] % 40) + 12);
-            }
-            $conv = min(35, max(12, (int) ($inq * 0.4)));
 
             $result[] = [
+                'varianteId'     => (int) $row['varianteId'],
                 'productoNombre' => $row['productoNombre'],
                 'sku'            => $row['sku'],
                 'colorHex'       => $row['colorHex'],
                 'colorNombre'    => $row['colorNombre'],
                 'talla'          => $row['talla'],
                 'inquiries'      => $inq,
-                'conversion'     => "{$conv}%",
-                'stock'          => (int) $row['stock']
+                'conversion'     => $inq > 0 ? "{$inq} cotizaciones" : "0 consultas",
+                'stock'          => (int) $row['stock'],
+                'precio'         => (float) $row['precio']
             ];
         }
 
         return $result;
+    }
+
+    /**
+     * Resumen agregado de métricas de catálogo para reportes y dashboard.
+     */
+    public function getCatalogSummary(): array
+    {
+        $categories = $this->fetchAll("
+            SELECT 
+                c.id,
+                c.nombre,
+                COUNT(p.id) as total_productos,
+                COALESCE(SUM(v.stock), 0) as total_stock,
+                COALESCE(SUM(v.stock * COALESCE(NULLIF(v.precio, 0), p.precio_base, 0)), 0) as valor_inventario
+            FROM categorias c
+            LEFT JOIN productos p ON p.id_categoria = c.id
+            LEFT JOIN variantes v ON v.id_producto = p.id
+            GROUP BY c.id, c.nombre
+            ORDER BY total_productos DESC, c.nombre ASC
+        ");
+
+        $brands = $this->fetchAll("
+            SELECT 
+                m.id,
+                m.nombre,
+                COUNT(p.id) as total_productos,
+                COALESCE(SUM(v.stock), 0) as total_stock,
+                COALESCE(SUM(v.stock * COALESCE(NULLIF(v.precio, 0), p.precio_base, 0)), 0) as valor_inventario
+            FROM marcas m
+            LEFT JOIN productos p ON p.id_marca = m.id
+            LEFT JOIN variantes v ON v.id_producto = p.id
+            GROUP BY m.id, m.nombre
+            ORDER BY total_productos DESC, m.nombre ASC
+        ");
+
+        return [
+            'categories' => $categories,
+            'brands'     => $brands
+        ];
     }
 }

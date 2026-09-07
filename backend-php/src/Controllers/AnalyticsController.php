@@ -19,21 +19,27 @@ class AnalyticsController extends BaseController
 
     /**
      * GET /api/analytics/dashboard
-     * Retorna todas las métricas agregadas para el dashboard de administración.
+     * Retorna todas las métricas reales y agregadas para el dashboard de administración.
      */
     public function dashboard(): void
     {
         $kpis                 = $this->analyticsModel->getKpis();
         $categoryDistribution = $this->analyticsModel->getCategoryDistribution();
+        $brandDistribution    = $this->analyticsModel->getBrandDistribution();
+        $genderDistribution   = $this->analyticsModel->getGenderDistribution();
         $quotesByDay          = $this->analyticsModel->getQuotesByDay();
-        $topVariants          = $this->analyticsModel->getTopVariants(6);
+        $topVariants          = $this->analyticsModel->getTopVariants(10);
+        $catalogSummary       = $this->analyticsModel->getCatalogSummary();
 
         Response::success([
             'kpis'                 => $kpis,
             'categoryDistribution' => $categoryDistribution,
+            'brandDistribution'    => $brandDistribution,
+            'genderDistribution'   => $genderDistribution,
             'quotesByDay'          => $quotesByDay,
-            'topVariants'          => $topVariants
-        ], 'Métricas del dashboard obtenidas exitosamente.');
+            'topVariants'          => $topVariants,
+            'catalogSummary'       => $catalogSummary
+        ], 200);
     }
 
     /**

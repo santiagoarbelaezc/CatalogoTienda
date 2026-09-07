@@ -346,12 +346,17 @@ REGLAS DE RESPUESTA CRÍTICAS:
             $apiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
             $postData = [
-                "model" => "llama-3.3-70b-versatile",
+                "model" => "openai/gpt-oss-120b",
                 "messages" => [
-                    ["role" => "system", "content" => $systemPrompt],
-                    ["role" => "user", "content" => "Genera los datos de venta y categorización para el producto llamado: '{$nombre}'"]
+                    [
+                        "role" => "user",
+                        "content" => $systemPrompt . "\n\nProducto a categorizar y describir: '{$nombre}'"
+                    ]
                 ],
-                "temperature" => 0.7
+                "temperature" => 1,
+                "max_completion_tokens" => 2048,
+                "top_p" => 1,
+                "reasoning_effort" => "medium"
             ];
 
             $ch = curl_init($apiUrl);
