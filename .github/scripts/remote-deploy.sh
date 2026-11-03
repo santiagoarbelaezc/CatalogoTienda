@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -e
 BACKEND_PATH="$1"
-BASE_PATH="$2"
+DOC_ROOT="$2"
 DB_NAME="$3"
 DB_USER="$4"
 DB_PASSWORD="$5"
 
 echo "=== Configurando entorno remoto ==="
 echo "Backend Path: $BACKEND_PATH"
-echo "Base Path:    $BASE_PATH"
+echo "Doc Root:     $DOC_ROOT"
 
-if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ] || [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ]; then
-  echo "::error::Rutas inválidas en remote-deploy.sh: BACKEND_PATH='$BACKEND_PATH', BASE_PATH='$BASE_PATH'"
+if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ] || [ -z "$DOC_ROOT" ] || [ "$DOC_ROOT" = "/" ]; then
+  echo "::error::Rutas inválidas en remote-deploy.sh: BACKEND_PATH='$BACKEND_PATH', DOC_ROOT='$DOC_ROOT'"
   exit 1
 fi
 
@@ -19,14 +19,8 @@ fi
 if [ ! -f "$BACKEND_PATH/.env" ]; then
   if [ -f "$BACKEND_PATH/.env.example" ]; then
     cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
-  elif [ -f "$BASE_PATH/backend_php/.env" ]; then
-    cp "$BASE_PATH/backend_php/.env" "$BACKEND_PATH/.env"
-  elif [ -f "$BASE_PATH/backend-php/.env" ]; then
-    cp "$BASE_PATH/backend-php/.env" "$BACKEND_PATH/.env"
-  elif [ -f "$BASE_PATH/public_html/backend_php/.env" ]; then
-    cp "$BASE_PATH/public_html/backend_php/.env" "$BACKEND_PATH/.env"
-  elif [ -f "$BASE_PATH/public_html/api/.env" ]; then
-    cp "$BASE_PATH/public_html/api/.env" "$BACKEND_PATH/.env"
+  elif [ -f "$DOC_ROOT/.env" ]; then
+    cp "$DOC_ROOT/.env" "$BACKEND_PATH/.env"
   fi
 fi
 
@@ -41,20 +35,17 @@ if [ -n "$DB_USER" ]; then
   sed -i "s/^DB_USER=.*/DB_USER=$DB_USER/" "$BACKEND_PATH/.env" 2>/dev/null || true
 fi
 if [ -n "$DB_PASSWORD" ]; then
-  # Comillas dobles para evitar que caracteres como '#' rompan la lectura de vlucas/phpdotenv
   sed -i "s/^DB_PASS=.*/DB_PASS=\"$DB_PASSWORD\"/" "$BACKEND_PATH/.env" 2>/dev/null || true
 fi
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
-# 2. Generar el API Bridge en public_html/api y public_html/backend_php
-for BRIDGE_DIR in "$BASE_PATH/public_html/api" "$BASE_PATH/public_html/backend_php"; do
+# 2. Generar el API Bridge en DOC_ROOT/api y DOC_ROOT/backend_php
+for BRIDGE_DIR in "$DOC_ROOT/api" "$DOC_ROOT/backend_php"; do
   mkdir -p "$BRIDGE_DIR"
-  # Limpiar código legado si existía en public_html
   rm -rf "$BRIDGE_DIR/vendor" "$BRIDGE_DIR/controllers" "$BRIDGE_DIR/config" \
          "$BRIDGE_DIR/middleware" "$BRIDGE_DIR/models" "$BRIDGE_DIR/helpers" \
          "$BRIDGE_DIR/database" "$BRIDGE_DIR/src" "$BRIDGE_DIR/.env" 2>/dev/null || true
 
-  # Generar index.php puente
   cat << 'EOF_BRIDGE_INDEX' > "$BRIDGE_DIR/index.php"
 <?php
 declare(strict_types=1);
@@ -73,7 +64,6 @@ if (!file_exists($backendRoot . "/index.php")) {
 require_once $backendRoot . "/index.php";
 EOF_BRIDGE_BODY
 
-  # Generar .htaccess puente
   PREFIX=$(basename "$BRIDGE_DIR")
   cat << EOF_BRIDGE_HTACCESS > "$BRIDGE_DIR/.htaccess"
 Options -Indexes
@@ -104,11 +94,4 @@ find "$BACKEND_PATH" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$BACKEND_PATH" -type f -exec chmod 644 {} + 2>/dev/null || true
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
-# 4. Migraciones automáticas por CLI (opcional si existe migrate.php)
-if [ -f "$BACKEND_PATH/database/migrate.php" ]; then
-  echo "Ejecutando migraciones de base de datos..."
-  php "$BACKEND_PATH/database/migrate.php" || echo "[WARN] Migración CLI pendiente de revisión."
-fi
-
 echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."
-

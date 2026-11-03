@@ -35,8 +35,9 @@ jobs:
     name: SSH Connectivity & Path Detection
     runs-on: ubuntu-latest
     outputs:
-      base_path: ${{ steps.detect.outputs.base_path }}
+      doc_root: ${{ steps.detect.outputs.doc_root }}
       backend_path: ${{ steps.detect.outputs.backend_path }}
+      base_path: ${{ steps.detect.outputs.base_path }}
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -86,25 +87,56 @@ jobs:
 
           DETECT_SCRIPT='
             USER_HOME=$(pwd -P)
-            CANDIDATE=""
+            echo "=== ESTRUCTURA DEL SERVIDOR ==="
+            ls -la "$USER_HOME"
+            if [ -d "$USER_HOME/domains" ]; then
+              echo "--- DIRECTORIO domains ---"
+              ls -la "$USER_HOME/domains"
+            fi
+
+            # 1. Prioridad: ¿Existe carpeta de subdominio catalogo.tiendaintima.com?
+            DOC_ROOT=""
             if [ -d "$USER_HOME/domains/catalogo.tiendaintima.com/public_html" ]; then
-              CANDIDATE="$USER_HOME/domains/catalogo.tiendaintima.com"
-            elif [ -d "$USER_HOME/domains" ]; then
-              FOUND=$(find "$USER_HOME/domains" -maxdepth 2 -type d -name "public_html" 2>/dev/null | head -n 1)
-              if [ -n "$FOUND" ]; then
-                CANDIDATE=$(dirname "$FOUND")
+              DOC_ROOT="$USER_HOME/domains/catalogo.tiendaintima.com/public_html"
+            elif [ -d "$USER_HOME/domains/tiendaintima.com/public_html/catalogo" ]; then
+              DOC_ROOT="$USER_HOME/domains/tiendaintima.com/public_html/catalogo"
+            elif [ -d "$USER_HOME/public_html/catalogo" ]; then
+              DOC_ROOT="$USER_HOME/public_html/catalogo"
+            fi
+
+            # 2. Si no se encontró por nombre fijo, buscar carpeta con nombre catalogo
+            if [ -z "$DOC_ROOT" ]; then
+              FOUND_CAT=$(find "$USER_HOME" -maxdepth 4 -type d \( -name "catalogo" -o -name "catalogo.tiendaintima.com" \) 2>/dev/null | head -n 1)
+              if [ -n "$FOUND_CAT" ]; then
+                if [ -d "$FOUND_CAT/public_html" ]; then
+                  DOC_ROOT="$FOUND_CAT/public_html"
+                else
+                  DOC_ROOT="$FOUND_CAT"
+                fi
               fi
             fi
 
-            if [ -z "$CANDIDATE" ] && [ -d "$USER_HOME/public_html" ]; then
-              CANDIDATE="$USER_HOME"
+            # 3. Si aún no existe, verificar si existe dominio tiendaintima.com
+            if [ -z "$DOC_ROOT" ]; then
+              if [ -d "$USER_HOME/domains/tiendaintima.com/public_html" ]; then
+                mkdir -p "$USER_HOME/domains/tiendaintima.com/public_html/catalogo"
+                DOC_ROOT="$USER_HOME/domains/tiendaintima.com/public_html/catalogo"
+              elif [ -d "$USER_HOME/public_html" ]; then
+                DOC_ROOT="$USER_HOME/public_html"
+              fi
             fi
 
-            if [ -z "$CANDIDATE" ]; then
-              CANDIDATE="$USER_HOME"
+            # 4. Fallback final seguro
+            if [ -z "$DOC_ROOT" ]; then
+              DOC_ROOT="$USER_HOME/public_html"
             fi
 
-            echo "BASE_PATH_RESULT=$CANDIDATE"
+            BACKEND_DIR="$USER_HOME/backend_php"
+            mkdir -p "$DOC_ROOT" "$BACKEND_DIR"
+
+            echo "DOC_ROOT_RESULT=$DOC_ROOT"
+            echo "BACKEND_PATH_RESULT=$BACKEND_DIR"
+            echo "BASE_PATH_RESULT=$USER_HOME"
           '
 
           RAW_OUTPUT=$(if [ -n "$SSH_KEY" ]; then
@@ -116,27 +148,35 @@ jobs:
           echo "Salida cruda del servidor:"
           echo "$RAW_OUTPUT"
 
+          DOC_ROOT=$(echo "$RAW_OUTPUT" | grep 'DOC_ROOT_RESULT=' | tail -n 1 | cut -d '=' -f 2- | tr -d '\r\n ')
+          BACKEND_PATH=$(echo "$RAW_OUTPUT" | grep 'BACKEND_PATH_RESULT=' | tail -n 1 | cut -d '=' -f 2- | tr -d '\r\n ')
           BASE_PATH=$(echo "$RAW_OUTPUT" | grep 'BASE_PATH_RESULT=' | tail -n 1 | cut -d '=' -f 2- | tr -d '\r\n ')
 
+          if [ -z "$DOC_ROOT" ] || [ "$DOC_ROOT" = "/" ]; then
+            DOC_ROOT="/home/$SSH_USER/public_html"
+          fi
+          if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ]; then
+            BACKEND_PATH="/home/$SSH_USER/backend_php"
+          fi
           if [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ]; then
             BASE_PATH="/home/$SSH_USER"
           fi
 
-          BACKEND_PATH="$BASE_PATH/backend_php"
-
-          echo "Base Path Resuelto: '$BASE_PATH'"
+          echo "Doc Root Resuelto: '$DOC_ROOT'"
           echo "Backend Path Resuelto: '$BACKEND_PATH'"
+          echo "Base Path Resuelto: '$BASE_PATH'"
 
           # Verificación de seguridad estricta
-          if [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ] || [ "$BASE_PATH" = "." ]; then
-            echo "::error::BASE_PATH inválido: '$BASE_PATH'. Abortando por seguridad."
+          if [ -z "$DOC_ROOT" ] || [ "$DOC_ROOT" = "/" ] || [ "$DOC_ROOT" = "." ]; then
+            echo "::error::DOC_ROOT inválido: '$DOC_ROOT'. Abortando."
             exit 1
           fi
 
-          RUN_SSH "mkdir -p '$BASE_PATH/public_html' '$BACKEND_PATH'"
+          RUN_SSH "mkdir -p '$DOC_ROOT' '$BACKEND_PATH'"
 
-          echo "base_path=$BASE_PATH" >> "$GITHUB_OUTPUT"
+          echo "doc_root=$DOC_ROOT" >> "$GITHUB_OUTPUT"
           echo "backend_path=$BACKEND_PATH" >> "$GITHUB_OUTPUT"
+          echo "base_path=$BASE_PATH" >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
   # 2. PATHS FILTER (Detectar qué cambió)
@@ -185,6 +225,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
+      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
       BASE_PATH: ${{ needs.ssh-check.outputs.base_path }}
     steps:
       - name: Checkout Repository
@@ -255,10 +296,9 @@ jobs:
             fi
           }
 
-          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
-          # Verificación de seguridad CRÍTICA
-          if [ -z "$TARGET_BASE" ] || [ "$TARGET_BASE" = "/" ] || [ "$TARGET_BASE" = "." ]; then
-            echo "::error::TARGET_BASE inválido: '$TARGET_BASE'. Abortando para proteger el servidor."
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/public_html}"
+          if [ -z "$TARGET_DOCROOT" ] || [ "$TARGET_DOCROOT" = "/" ] || [ "$TARGET_DOCROOT" = "." ]; then
+            echo "::error::TARGET_DOCROOT inválido: '$TARGET_DOCROOT'. Abortando."
             exit 1
           fi
 
@@ -281,19 +321,35 @@ jobs:
           fi
 
           echo "Directorio de compilación detectado: $DIST_DIR"
-          echo "Sincronizando frontend hacia $TARGET_BASE/public_html/..."
+          echo "Sincronizando frontend hacia $TARGET_DOCROOT/..."
 
-          # Filtros protect garantizan que el API Bridge nunca se borre
+          # Sincronizar hacia DOC_ROOT protegiendo el API Bridge
           RUN_RSYNC -avz --delete \
             --filter='protect /api' \
             --filter='protect /api/**' \
             --filter='protect /backend_php' \
             --filter='protect /backend_php/**' \
-            "$DIST_DIR/" production:"$TARGET_BASE/public_html/"
+            "$DIST_DIR/" production:"$TARGET_DOCROOT/"
 
           if [ -f "$FDIR/public/.htaccess" ]; then
-            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$TARGET_BASE/public_html/.htaccess"
+            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$TARGET_DOCROOT/.htaccess"
           fi
+
+          # Si DOC_ROOT es una subcarpeta (ej. public_html/catalogo), copiar también a public_html/
+          MAIN_PUB="/home/$SSH_USER/public_html"
+          if [ "$TARGET_DOCROOT" != "$MAIN_PUB" ]; then
+            echo "Sincronizando también copia a $MAIN_PUB/..."
+            RUN_RSYNC -avz \
+              --filter='protect /api' \
+              --filter='protect /api/**' \
+              --filter='protect /backend_php' \
+              --filter='protect /backend_php/**' \
+              "$DIST_DIR/" production:"$MAIN_PUB/" || true
+            if [ -f "$FDIR/public/.htaccess" ]; then
+              RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$MAIN_PUB/.htaccess" || true
+            fi
+          fi
+
           echo "Frontend sincronizado exitosamente."
 
   # ──────────────────────────────────────────────────────────
@@ -317,7 +373,7 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      BASE_PATH: ${{ needs.ssh-check.outputs.base_path }}
+      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
       BACKEND_PATH: ${{ needs.ssh-check.outputs.backend_path }}
     steps:
       - name: Checkout Repository
@@ -391,12 +447,9 @@ jobs:
             fi
           }
 
-          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
-          TARGET_BACKEND="${BACKEND_PATH:-$TARGET_BASE/backend_php}"
-
-          # Verificación de seguridad CRÍTICA
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
           if [ -z "$TARGET_BACKEND" ] || [ "$TARGET_BACKEND" = "/" ] || [ "$TARGET_BACKEND" = "." ]; then
-            echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando para proteger el servidor."
+            echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando."
             exit 1
           fi
 
@@ -411,14 +464,24 @@ jobs:
 
       - name: Configure Remote .env, Generate API Bridge & Migrate
         run: |
-          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
-          TARGET_BACKEND="${BACKEND_PATH:-$TARGET_BASE/backend_php}"
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/public_html}"
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
 
           chmod +x .github/scripts/remote-deploy.sh
           if [ -n "$SSH_KEY" ]; then
-            ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_BASE' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           else
-            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_BASE' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+          fi
+
+          # Si DOC_ROOT es subcarpeta, configurar también el puente en public_html principal
+          MAIN_PUB="/home/$SSH_USER/public_html"
+          if [ "$TARGET_DOCROOT" != "$MAIN_PUB" ]; then
+            if [ -n "$SSH_KEY" ]; then
+              ssh production "bash -s -- '$TARGET_BACKEND' '$MAIN_PUB' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh || true
+            else
+              sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$MAIN_PUB' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh || true
+            fi
           fi
 
       - name: Verify Live API Health
