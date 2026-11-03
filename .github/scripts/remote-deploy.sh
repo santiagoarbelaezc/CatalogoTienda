@@ -87,11 +87,16 @@ EOF_BRIDGE_HTACCESS
   echo "[OK] API Bridge configurado en $BRIDGE_DIR"
 done
 
-# 3. Directorio de subidas y permisos
+# 3. Directorio de subidas y permisos del backend
 mkdir -p "$BACKEND_PATH/uploads"
 chmod 775 "$BACKEND_PATH/uploads" 2>/dev/null || true
 find "$BACKEND_PATH" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$BACKEND_PATH" -type f -exec chmod 644 {} + 2>/dev/null || true
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
+
+# 4. Asegurar permisos en public_html (elimina el 403 Forbidden de LiteSpeed)
+chmod 755 "$DOC_ROOT" 2>/dev/null || true
+find "$DOC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$DOC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
 
 echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."
