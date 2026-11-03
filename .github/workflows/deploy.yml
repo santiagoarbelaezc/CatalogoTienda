@@ -380,3 +380,4 @@ jobs:
           echo "Probando: $HEALTH_URL"
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
           echo "HTTP Status Code: $STATUS_CODE"
+

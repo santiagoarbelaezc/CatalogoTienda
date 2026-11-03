@@ -13,3 +13,4 @@
   # 3. Reescribir todas las demás URLs hacia el index.html de la SPA
   RewriteRule ^ index.html [L]
 </IfModule>
+

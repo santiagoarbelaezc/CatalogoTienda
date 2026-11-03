@@ -106,3 +106,4 @@ if [ -f "$BACKEND_PATH/database/migrate.php" ]; then
 fi
 
 echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."
+

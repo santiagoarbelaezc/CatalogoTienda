@@ -66,3 +66,4 @@ jobs:
         run: |
           BDIR="${{ steps.locate.outputs.dir }}"
           find "$BDIR" -type f -name "*.php" -not -path "$BDIR/vendor/*" -exec php -l {} +
+
