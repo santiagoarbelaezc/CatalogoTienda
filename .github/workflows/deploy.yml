@@ -403,7 +403,8 @@ jobs:
           BDIR="${{ steps.locate.outputs.dir }}"
           echo "Desplegando en carpeta privada $TARGET_BACKEND/..."
           RUN_RSYNC -avz --delete \
-            --exclude='.env*' \
+            --exclude='.env' \
+            --exclude='.env.local' \
             --exclude='uploads/' \
             --exclude='.git*' \
             "$BDIR/" production:"$TARGET_BACKEND/"

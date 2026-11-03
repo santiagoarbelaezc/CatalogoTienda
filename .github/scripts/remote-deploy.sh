@@ -17,7 +17,9 @@ fi
 
 # 1. Configurar archivo .env en la carpeta privada si no existe
 if [ ! -f "$BACKEND_PATH/.env" ]; then
-  if [ -f "$BASE_PATH/backend_php/.env" ]; then
+  if [ -f "$BACKEND_PATH/.env.example" ]; then
+    cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
+  elif [ -f "$BASE_PATH/backend_php/.env" ]; then
     cp "$BASE_PATH/backend_php/.env" "$BACKEND_PATH/.env"
   elif [ -f "$BASE_PATH/backend-php/.env" ]; then
     cp "$BASE_PATH/backend-php/.env" "$BACKEND_PATH/.env"
@@ -25,8 +27,6 @@ if [ ! -f "$BACKEND_PATH/.env" ]; then
     cp "$BASE_PATH/public_html/backend_php/.env" "$BACKEND_PATH/.env"
   elif [ -f "$BASE_PATH/public_html/api/.env" ]; then
     cp "$BASE_PATH/public_html/api/.env" "$BACKEND_PATH/.env"
-  else
-    cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
   fi
 fi
 
