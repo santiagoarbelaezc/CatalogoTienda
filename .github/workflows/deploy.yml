@@ -85,27 +85,27 @@ jobs:
           RUN_SSH "echo 'SSH exitoso.'"
 
           DETECT_SCRIPT='
-USER_HOME=$(pwd -P)
-CANDIDATE=""
-if [ -d "$USER_HOME/domains/catalogo.tiendaintima.com/public_html" ]; then
-  CANDIDATE="$USER_HOME/domains/catalogo.tiendaintima.com"
-elif [ -d "$USER_HOME/domains" ]; then
-  FOUND=$(find "$USER_HOME/domains" -maxdepth 2 -type d -name "public_html" 2>/dev/null | head -n 1)
-  if [ -n "$FOUND" ]; then
-    CANDIDATE=$(dirname "$FOUND")
-  fi
-fi
+            USER_HOME=$(pwd -P)
+            CANDIDATE=""
+            if [ -d "$USER_HOME/domains/catalogo.tiendaintima.com/public_html" ]; then
+              CANDIDATE="$USER_HOME/domains/catalogo.tiendaintima.com"
+            elif [ -d "$USER_HOME/domains" ]; then
+              FOUND=$(find "$USER_HOME/domains" -maxdepth 2 -type d -name "public_html" 2>/dev/null | head -n 1)
+              if [ -n "$FOUND" ]; then
+                CANDIDATE=$(dirname "$FOUND")
+              fi
+            fi
 
-if [ -z "$CANDIDATE" ] && [ -d "$USER_HOME/public_html" ]; then
-  CANDIDATE="$USER_HOME"
-fi
+            if [ -z "$CANDIDATE" ] && [ -d "$USER_HOME/public_html" ]; then
+              CANDIDATE="$USER_HOME"
+            fi
 
-if [ -z "$CANDIDATE" ]; then
-  CANDIDATE="$USER_HOME"
-fi
+            if [ -z "$CANDIDATE" ]; then
+              CANDIDATE="$USER_HOME"
+            fi
 
-echo "BASE_PATH_RESULT=$CANDIDATE"
-'
+            echo "BASE_PATH_RESULT=$CANDIDATE"
+          '
 
           RAW_OUTPUT=$(if [ -n "$SSH_KEY" ]; then
             ssh production "bash -s" <<< "$DETECT_SCRIPT"
