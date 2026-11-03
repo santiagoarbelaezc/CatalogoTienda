@@ -80,34 +80,63 @@ jobs:
               sshpass -p "$SSH_PASSWORD" ssh production "$@"
             fi
           }
+
           echo "Probando conexión SSH con Hostinger..."
           RUN_SSH "echo 'SSH exitoso.'"
 
-          DETECT_CMD='
-            if [ -d "/home/'"$SSH_USER"'/domains/catalogo.tiendaintima.com/public_html" ]; then
-              echo "/home/'"$SSH_USER"'/domains/catalogo.tiendaintima.com"
-              exit 0
-            fi
-            if [ -d "/home/'"$SSH_USER"'/domains" ]; then
-              DOMAIN_DIR=$(find "/home/'"$SSH_USER"'/domains" -mindepth 1 -maxdepth 1 -type d | head -n 1)
-              if [ -n "$DOMAIN_DIR" ] && [ -d "$DOMAIN_DIR/public_html" ]; then
-                echo "$DOMAIN_DIR"
-                exit 0
-              fi
-            fi
-            if [ -d "/home/'"$SSH_USER"'/public_html" ]; then
-              echo "/home/'"$SSH_USER"'"
-              exit 0
-            fi
-            echo "$HOME"
-          '
-          BASE_PATH=$(RUN_SSH "$DETECT_CMD" | tr -d '\r')
+          DETECT_SCRIPT='
+USER_HOME=$(pwd -P)
+CANDIDATE=""
+if [ -d "$USER_HOME/domains/catalogo.tiendaintima.com/public_html" ]; then
+  CANDIDATE="$USER_HOME/domains/catalogo.tiendaintima.com"
+elif [ -d "$USER_HOME/domains" ]; then
+  FOUND=$(find "$USER_HOME/domains" -maxdepth 2 -type d -name "public_html" 2>/dev/null | head -n 1)
+  if [ -n "$FOUND" ]; then
+    CANDIDATE=$(dirname "$FOUND")
+  fi
+fi
+
+if [ -z "$CANDIDATE" ] && [ -d "$USER_HOME/public_html" ]; then
+  CANDIDATE="$USER_HOME"
+fi
+
+if [ -z "$CANDIDATE" ]; then
+  CANDIDATE="$USER_HOME"
+fi
+
+echo "BASE_PATH_RESULT=$CANDIDATE"
+'
+
+          RAW_OUTPUT=$(if [ -n "$SSH_KEY" ]; then
+            ssh production "bash -s" <<< "$DETECT_SCRIPT"
+          else
+            sshpass -p "$SSH_PASSWORD" ssh production "bash -s" <<< "$DETECT_SCRIPT"
+          fi)
+
+          echo "Salida cruda del servidor:"
+          echo "$RAW_OUTPUT"
+
+          BASE_PATH=$(echo "$RAW_OUTPUT" | grep 'BASE_PATH_RESULT=' | tail -n 1 | cut -d '=' -f 2- | tr -d '\r\n ')
+
+          if [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ]; then
+            BASE_PATH="/home/$SSH_USER"
+          fi
+
           BACKEND_PATH="$BASE_PATH/backend_php"
-          echo "Base Path: $BASE_PATH"
-          echo "Backend Path (Fuera de public_html): $BACKEND_PATH"
+
+          echo "Base Path Resuelto: '$BASE_PATH'"
+          echo "Backend Path Resuelto: '$BACKEND_PATH'"
+
+          # Verificación de seguridad estricta
+          if [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ] || [ "$BASE_PATH" = "." ]; then
+            echo "::error::BASE_PATH inválido: '$BASE_PATH'. Abortando por seguridad."
+            exit 1
+          fi
+
           RUN_SSH "mkdir -p '$BASE_PATH/public_html' '$BACKEND_PATH'"
-          echo "base_path=$BASE_PATH" >> $GITHUB_OUTPUT
-          echo "backend_path=$BACKEND_PATH" >> $GITHUB_OUTPUT
+
+          echo "base_path=$BASE_PATH" >> "$GITHUB_OUTPUT"
+          echo "backend_path=$BACKEND_PATH" >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
   # 2. PATHS FILTER (Detectar qué cambió)
@@ -226,6 +255,13 @@ jobs:
             fi
           }
 
+          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
+          # Verificación de seguridad CRÍTICA
+          if [ -z "$TARGET_BASE" ] || [ "$TARGET_BASE" = "/" ] || [ "$TARGET_BASE" = "." ]; then
+            echo "::error::TARGET_BASE inválido: '$TARGET_BASE'. Abortando para proteger el servidor."
+            exit 1
+          fi
+
           FDIR="${{ steps.locate.outputs.dir }}"
           DIST_DIR="$FDIR/dist/front/browser"
           if [ ! -d "$DIST_DIR" ]; then
@@ -245,7 +281,7 @@ jobs:
           fi
 
           echo "Directorio de compilación detectado: $DIST_DIR"
-          echo "Sincronizando frontend hacia $BASE_PATH/public_html/..."
+          echo "Sincronizando frontend hacia $TARGET_BASE/public_html/..."
 
           # Filtros protect garantizan que el API Bridge nunca se borre
           RUN_RSYNC -avz --delete \
@@ -253,10 +289,10 @@ jobs:
             --filter='protect /api/**' \
             --filter='protect /backend_php' \
             --filter='protect /backend_php/**' \
-            "$DIST_DIR/" production:"$BASE_PATH/public_html/"
+            "$DIST_DIR/" production:"$TARGET_BASE/public_html/"
 
           if [ -f "$FDIR/public/.htaccess" ]; then
-            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$BASE_PATH/public_html/.htaccess"
+            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$TARGET_BASE/public_html/.htaccess"
           fi
           echo "Frontend sincronizado exitosamente."
 
@@ -355,21 +391,33 @@ jobs:
             fi
           }
 
+          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
+          TARGET_BACKEND="${BACKEND_PATH:-$TARGET_BASE/backend_php}"
+
+          # Verificación de seguridad CRÍTICA
+          if [ -z "$TARGET_BACKEND" ] || [ "$TARGET_BACKEND" = "/" ] || [ "$TARGET_BACKEND" = "." ]; then
+            echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando para proteger el servidor."
+            exit 1
+          fi
+
           BDIR="${{ steps.locate.outputs.dir }}"
-          echo "Desplegando en carpeta privada $BACKEND_PATH/..."
+          echo "Desplegando en carpeta privada $TARGET_BACKEND/..."
           RUN_RSYNC -avz --delete \
             --exclude='.env*' \
             --exclude='uploads/' \
             --exclude='.git*' \
-            "$BDIR/" production:"$BACKEND_PATH/"
+            "$BDIR/" production:"$TARGET_BACKEND/"
 
       - name: Configure Remote .env, Generate API Bridge & Migrate
         run: |
+          TARGET_BASE="${BASE_PATH:-/home/$SSH_USER}"
+          TARGET_BACKEND="${BACKEND_PATH:-$TARGET_BASE/backend_php}"
+
           chmod +x .github/scripts/remote-deploy.sh
           if [ -n "$SSH_KEY" ]; then
-            ssh production "bash -s -- '$BACKEND_PATH' '$BASE_PATH' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_BASE' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           else
-            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$BACKEND_PATH' '$BASE_PATH' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_BASE' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           fi
 
       - name: Verify Live API Health
@@ -380,4 +428,3 @@ jobs:
           echo "Probando: $HEALTH_URL"
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
           echo "HTTP Status Code: $STATUS_CODE"
-

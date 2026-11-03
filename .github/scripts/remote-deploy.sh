@@ -10,6 +10,11 @@ echo "=== Configurando entorno remoto ==="
 echo "Backend Path: $BACKEND_PATH"
 echo "Base Path:    $BASE_PATH"
 
+if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ] || [ -z "$BASE_PATH" ] || [ "$BASE_PATH" = "/" ]; then
+  echo "::error::Rutas inválidas en remote-deploy.sh: BACKEND_PATH='$BACKEND_PATH', BASE_PATH='$BASE_PATH'"
+  exit 1
+fi
+
 # 1. Configurar archivo .env en la carpeta privada si no existe
 if [ ! -f "$BACKEND_PATH/.env" ]; then
   if [ -f "$BASE_PATH/backend_php/.env" ]; then
