@@ -1,0 +1,382 @@
+name: Continuous Deployment (Hostinger)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'front/**'
+      - 'frontend/**'
+      - 'backend-php/**'
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+      - '.github/scripts/**'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Componente a desplegar'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - frontend
+          - backend
+          - ssh-check
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # 1. SSH CHECK & REMOTE PATH RESOLUTION
+  # ──────────────────────────────────────────────────────────
+  ssh-check:
+    name: SSH Connectivity & Path Detection
+    runs-on: ubuntu-latest
+    outputs:
+      base_path: ${{ steps.detect.outputs.base_path }}
+      backend_path: ${{ steps.detect.outputs.backend_path }}
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+    steps:
+      - name: Install SSH client & tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass openssh-client
+
+      - name: Configure SSH Authentication
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KEY" ]; then
+            printf '%s\n' "$SSH_KEY" > ~/.ssh/id_hostinger
+            chmod 600 ~/.ssh/id_hostinger
+            SSH_AUTH_CONFIG="IdentityFile ~/.ssh/id_hostinger"
+          fi
+          {
+            echo "Host production"
+            echo "  HostName $SSH_HOST"
+            echo "  User $SSH_USER"
+            echo "  Port $SSH_PORT"
+            echo "  StrictHostKeyChecking no"
+            echo "  UserKnownHostsFile /dev/null"
+            echo "  LogLevel ERROR"
+            if [ -n "$SSH_AUTH_CONFIG" ]; then
+              echo "  $SSH_AUTH_CONFIG"
+            fi
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Test Remote Connection & Resolve Paths
+        id: detect
+        run: |
+          RUN_SSH() {
+            if [ -n "$SSH_KEY" ]; then
+              ssh production "$@"
+            else
+              sshpass -p "$SSH_PASSWORD" ssh production "$@"
+            fi
+          }
+          echo "Probando conexión SSH con Hostinger..."
+          RUN_SSH "echo 'SSH exitoso.'"
+
+          DETECT_CMD='
+            if [ -d "/home/'"$SSH_USER"'/domains/catalogo.tiendaintima.com/public_html" ]; then
+              echo "/home/'"$SSH_USER"'/domains/catalogo.tiendaintima.com"
+              exit 0
+            fi
+            if [ -d "/home/'"$SSH_USER"'/domains" ]; then
+              DOMAIN_DIR=$(find "/home/'"$SSH_USER"'/domains" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+              if [ -n "$DOMAIN_DIR" ] && [ -d "$DOMAIN_DIR/public_html" ]; then
+                echo "$DOMAIN_DIR"
+                exit 0
+              fi
+            fi
+            if [ -d "/home/'"$SSH_USER"'/public_html" ]; then
+              echo "/home/'"$SSH_USER"'"
+              exit 0
+            fi
+            echo "$HOME"
+          '
+          BASE_PATH=$(RUN_SSH "$DETECT_CMD" | tr -d '\r')
+          BACKEND_PATH="$BASE_PATH/backend_php"
+          echo "Base Path: $BASE_PATH"
+          echo "Backend Path (Fuera de public_html): $BACKEND_PATH"
+          RUN_SSH "mkdir -p '$BASE_PATH/public_html' '$BACKEND_PATH'"
+          echo "base_path=$BASE_PATH" >> $GITHUB_OUTPUT
+          echo "backend_path=$BACKEND_PATH" >> $GITHUB_OUTPUT
+
+  # ──────────────────────────────────────────────────────────
+  # 2. PATHS FILTER (Detectar qué cambió)
+  # ──────────────────────────────────────────────────────────
+  changes:
+    name: Detect Changed Paths
+    needs: ssh-check
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Evaluate Component Changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'front/**'
+              - 'frontend/**'
+              - '.github/workflows/deploy.yml'
+            backend:
+              - 'backend-php/**'
+              - 'backend/**'
+              - '.github/scripts/**'
+              - '.github/workflows/deploy.yml'
+
+  # ──────────────────────────────────────────────────────────
+  # 3. DEPLOY FRONTEND (SPA)
+  # ──────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend (SPA)
+    needs: [ssh-check, changes]
+    if: |
+      needs.changes.outputs.frontend == 'true' ||
+      github.event.inputs.target == 'all' ||
+      github.event.inputs.target == 'frontend' ||
+      (github.event_name == 'push' && needs.changes.outputs.backend != 'true')
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      BASE_PATH: ${{ needs.ssh-check.outputs.base_path }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Locate Frontend Directory
+        id: locate
+        run: |
+          if [ -d "front" ]; then
+            echo "dir=front" >> $GITHUB_OUTPUT
+          elif [ -d "frontend" ]; then
+            echo "dir=frontend" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No se encontró directorio frontend."
+            exit 1
+          fi
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ${{ steps.locate.outputs.dir }}/package-lock.json
+
+      - name: Install NPM Dependencies
+        run: |
+          cd ${{ steps.locate.outputs.dir }}
+          npm ci --prefer-offline
+
+      - name: Build Frontend (Production)
+        run: |
+          cd ${{ steps.locate.outputs.dir }}
+          npm run build -- --configuration production
+
+      - name: Install SSH and Rsync tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass rsync openssh-client
+
+      - name: Configure SSH Host Profile
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KEY" ]; then
+            printf '%s\n' "$SSH_KEY" > ~/.ssh/id_hostinger
+            chmod 600 ~/.ssh/id_hostinger
+            SSH_AUTH_CONFIG="IdentityFile ~/.ssh/id_hostinger"
+          fi
+          {
+            echo "Host production"
+            echo "  HostName $SSH_HOST"
+            echo "  User $SSH_USER"
+            echo "  Port $SSH_PORT"
+            echo "  StrictHostKeyChecking no"
+            echo "  UserKnownHostsFile /dev/null"
+            echo "  LogLevel ERROR"
+            if [ -n "$SSH_AUTH_CONFIG" ]; then
+              echo "  $SSH_AUTH_CONFIG"
+            fi
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy Frontend via Rsync (Protegiendo API Bridge)
+        run: |
+          RUN_RSYNC() {
+            if [ -n "$SSH_KEY" ]; then
+              rsync "$@"
+            else
+              sshpass -p "$SSH_PASSWORD" rsync "$@"
+            fi
+          }
+
+          FDIR="${{ steps.locate.outputs.dir }}"
+          DIST_DIR="$FDIR/dist/front/browser"
+          if [ ! -d "$DIST_DIR" ]; then
+            DIST_DIR="$FDIR/dist/frontend/browser"
+          fi
+          if [ ! -d "$DIST_DIR" ]; then
+            DIST_DIR="$FDIR/dist/browser"
+          fi
+          if [ ! -d "$DIST_DIR" ]; then
+            DIST_DIR="$FDIR/dist/front"
+          fi
+          if [ ! -d "$DIST_DIR" ]; then
+            DIST_DIR="$FDIR/dist/frontend"
+          fi
+          if [ ! -d "$DIST_DIR" ]; then
+            DIST_DIR="$FDIR/dist"
+          fi
+
+          echo "Directorio de compilación detectado: $DIST_DIR"
+          echo "Sincronizando frontend hacia $BASE_PATH/public_html/..."
+
+          # Filtros protect garantizan que el API Bridge nunca se borre
+          RUN_RSYNC -avz --delete \
+            --filter='protect /api' \
+            --filter='protect /api/**' \
+            --filter='protect /backend_php' \
+            --filter='protect /backend_php/**' \
+            "$DIST_DIR/" production:"$BASE_PATH/public_html/"
+
+          if [ -f "$FDIR/public/.htaccess" ]; then
+            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$BASE_PATH/public_html/.htaccess"
+          fi
+          echo "Frontend sincronizado exitosamente."
+
+  # ──────────────────────────────────────────────────────────
+  # 4. DEPLOY BACKEND (PHP Core Fuera de public_html + API Bridge)
+  # ──────────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend & API Bridge
+    needs: [ssh-check, changes]
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event.inputs.target == 'all' ||
+      github.event.inputs.target == 'backend' ||
+      (github.event_name == 'push' && needs.changes.outputs.frontend != 'true')
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      BASE_PATH: ${{ needs.ssh-check.outputs.base_path }}
+      BACKEND_PATH: ${{ needs.ssh-check.outputs.backend_path }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Locate Backend Directory
+        id: locate
+        run: |
+          if [ -d "backend-php" ]; then
+            echo "dir=backend-php" >> $GITHUB_OUTPUT
+          elif [ -d "backend" ]; then
+            echo "dir=backend" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No se encontró directorio backend."
+            exit 1
+          fi
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, json, curl
+          coverage: none
+
+      - name: Install Composer Dependencies (Production)
+        run: |
+          cd ${{ steps.locate.outputs.dir }}
+          composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Validate No .env In Repository
+        run: |
+          BDIR="${{ steps.locate.outputs.dir }}"
+          if git ls-files --error-unmatch "$BDIR/.env" 2>/dev/null; then
+            echo "::error::Archivo $BDIR/.env rastreado en Git. Deteniendo por seguridad."
+            exit 1
+          fi
+
+      - name: Install SSH and Rsync tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass rsync openssh-client
+
+      - name: Configure SSH Host Profile
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KEY" ]; then
+            printf '%s\n' "$SSH_KEY" > ~/.ssh/id_hostinger
+            chmod 600 ~/.ssh/id_hostinger
+            SSH_AUTH_CONFIG="IdentityFile ~/.ssh/id_hostinger"
+          fi
+          {
+            echo "Host production"
+            echo "  HostName $SSH_HOST"
+            echo "  User $SSH_USER"
+            echo "  Port $SSH_PORT"
+            echo "  StrictHostKeyChecking no"
+            echo "  UserKnownHostsFile /dev/null"
+            echo "  LogLevel ERROR"
+            if [ -n "$SSH_AUTH_CONFIG" ]; then
+              echo "  $SSH_AUTH_CONFIG"
+            fi
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy Backend Core to Isolated Directory
+        run: |
+          RUN_RSYNC() {
+            if [ -n "$SSH_KEY" ]; then
+              rsync "$@"
+            else
+              sshpass -p "$SSH_PASSWORD" rsync "$@"
+            fi
+          }
+
+          BDIR="${{ steps.locate.outputs.dir }}"
+          echo "Desplegando en carpeta privada $BACKEND_PATH/..."
+          RUN_RSYNC -avz --delete \
+            --exclude='.env*' \
+            --exclude='uploads/' \
+            --exclude='.git*' \
+            "$BDIR/" production:"$BACKEND_PATH/"
+
+      - name: Configure Remote .env, Generate API Bridge & Migrate
+        run: |
+          chmod +x .github/scripts/remote-deploy.sh
+          if [ -n "$SSH_KEY" ]; then
+            ssh production "bash -s -- '$BACKEND_PATH' '$BASE_PATH' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+          else
+            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$BACKEND_PATH' '$BASE_PATH' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+          fi
+
+      - name: Verify Live API Health
+        run: |
+          echo "Verificando endpoint de salud de la API..."
+          sleep 3
+          HEALTH_URL="https://catalogo.tiendaintima.com/api/health"
+          echo "Probando: $HEALTH_URL"
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
+          echo "HTTP Status Code: $STATUS_CODE"

@@ -1,0 +1,68 @@
+name: Backend CI (PHP)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'backend-php/**'
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'backend-php/**'
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-quality:
+    name: PHP Quality & Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, json, curl
+          coverage: none
+
+      - name: Locate Backend Directory
+        id: locate
+        run: |
+          if [ -d "backend-php" ]; then
+            echo "dir=backend-php" >> $GITHUB_OUTPUT
+          elif [ -d "backend" ]; then
+            echo "dir=backend" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No se encontró directorio del backend."
+            exit 1
+          fi
+
+      - name: Validate composer.json
+        run: composer validate --working-dir=${{ steps.locate.outputs.dir }}
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.locate.outputs.dir }}/vendor
+          key: composer-${{ runner.os }}-8.3-${{ hashFiles(format('{0}/composer.lock', steps.locate.outputs.dir)) }}
+          restore-keys: |
+            composer-${{ runner.os }}-8.3-
+
+      - name: Install Composer Dependencies
+        run: |
+          cd ${{ steps.locate.outputs.dir }}
+          composer install --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Check PHP Syntax (Lint)
+        run: |
+          BDIR="${{ steps.locate.outputs.dir }}"
+          find "$BDIR" -type f -name "*.php" -not -path "$BDIR/vendor/*" -exec php -l {} +

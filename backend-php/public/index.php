@@ -13,7 +13,7 @@ declare(strict_types=1);
  */
 
 // Directorio raíz del proyecto (un nivel arriba de public/)
-define('BASE_PATH', dirname(__DIR__));
+defined('BASE_PATH') || define('BASE_PATH', dirname(__DIR__));
 
 // Autoloading PSR-4 vía Composer
 require BASE_PATH . '/vendor/autoload.php';

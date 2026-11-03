@@ -1,6 +1,7 @@
 {
     "name": "tiendaintima/catalog-api",
     "description": "API REST profesional — Catálogo Tienda Íntima",
+    "license": "proprietary",
     "type": "project",
     "require": {
         "php": ">=8.1",

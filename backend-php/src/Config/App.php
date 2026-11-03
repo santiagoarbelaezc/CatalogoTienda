@@ -59,10 +59,14 @@ final class App
         $method = $_SERVER['REQUEST_METHOD'];
         $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
-        // Eliminar el prefijo /api si la API está montada en un subdirectorio
-        $apiPrefix = rtrim($_ENV['API_PREFIX'] ?? '/api', '/');
-        if ($apiPrefix !== '' && str_starts_with($uri, $apiPrefix)) {
-            $uri = substr($uri, strlen($apiPrefix));
+        // Eliminar prefijos de API (/api, /backend_php) si está montada en un subdirectorio
+        $prefixes = array_unique(array_filter([$_ENV['API_PREFIX'] ?? '', '/backend_php', '/api']));
+        foreach ($prefixes as $prefix) {
+            $prefix = rtrim($prefix, '/');
+            if ($prefix !== '' && str_starts_with($uri, $prefix)) {
+                $uri = substr($uri, strlen($prefix));
+                break;
+            }
         }
 
         $uri = '/' . ltrim($uri ?: '/', '/');
