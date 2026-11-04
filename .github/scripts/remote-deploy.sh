@@ -138,4 +138,8 @@ chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 chmod 755 "$DOC_ROOT/backend-catalogo" 2>/dev/null || true
 chmod 644 "$DOC_ROOT/backend-catalogo/index.php" "$DOC_ROOT/backend-catalogo/.htaccess" 2>/dev/null || true
 
+# 5. Reiniciar procesos cacheados de LiteSpeed PHP para obligar a recargar php.ini y extensiones
+echo "Reiniciando procesos LSPHP del usuario para refrescar extensiones..."
+killall -9 lsphp 2>/dev/null || pkill -9 -u "$USER" lsphp 2>/dev/null || true
+
 echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."
