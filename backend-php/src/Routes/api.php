@@ -30,20 +30,32 @@ $auth = new AuthMiddleware();
 
 // ── Health-check ──────────────────────────────────────────────────────────────
 $router->get('/', fn() => Response::success(['status' => 'ok', 'version' => '1.0.0']));
-$router->get('/health', fn() => Response::success([
-    'status' => 'ok',
-    'timestamp' => date('c'),
-    'php_version' => PHP_VERSION,
-    'php_sapi' => PHP_SAPI,
-    'php_ini' => php_ini_loaded_file(),
-    'pdo_loaded' => class_exists('PDO'),
-    'pdo_drivers' => class_exists('PDO') ? \PDO::getAvailableDrivers() : [],
-    'has_mysqli' => extension_loaded('mysqli'),
-    'user' => get_current_user(),
-    'doc_root' => $_SERVER['DOCUMENT_ROOT'] ?? '',
-    'script_filename' => $_SERVER['SCRIPT_FILENAME'] ?? '',
-    'loaded_extensions' => get_loaded_extensions(),
-]));
+$router->get('/health', function() {
+    $dbError = null;
+    $dbOk = false;
+    try {
+        \App\Config\Database::getInstance()->getConnection();
+        $dbOk = true;
+    } catch (\Throwable $e) {
+        $dbError = $e->getPrevious() ? $e->getPrevious()->getMessage() : $e->getMessage();
+    }
+
+    return Response::success([
+        'status' => 'ok',
+        'timestamp' => date('c'),
+        'php_version' => PHP_VERSION,
+        'php_sapi' => PHP_SAPI,
+        'pdo_loaded' => class_exists('PDO'),
+        'pdo_drivers' => class_exists('PDO') ? \PDO::getAvailableDrivers() : [],
+        'has_mysqli' => extension_loaded('mysqli'),
+        'db_connected' => $dbOk,
+        'db_error' => $dbError,
+        'db_host' => $_ENV['DB_HOST'] ?? 'not_set',
+        'db_name' => $_ENV['DB_NAME'] ?? 'not_set',
+        'db_user' => $_ENV['DB_USER'] ?? 'not_set',
+        'has_db_pass' => !empty($_ENV['DB_PASS']),
+    ]);
+});
 
 // Event tracking público
 $router->post('/analytics/events', fn() => (new AnalyticsController())->trackEvent());
