@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://catalogo.tiendaintima.com/api',
+  apiUrl: 'https://tiendaintima.com/backend-catalogo',
   cloudinaryCloudName: 'dsv1gdgya'
 };

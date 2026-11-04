@@ -19,8 +19,9 @@ mkdir -p "$BACKEND_PATH" "$DOC_ROOT"
 
 # 1. Configurar archivo .env en la carpeta privada
 if [ ! -f "$BACKEND_PATH/.env" ]; then
-  if [ -f "$HOME/backend_php/.env" ]; then
-    # Reutilizar el .env de la ubicación anterior (conserva JWT, Cloudinary, Groq, DB)
+  if [ -f "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" ]; then
+    cp "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" "$BACKEND_PATH/.env"
+  elif [ -f "$HOME/backend_php/.env" ]; then
     cp "$HOME/backend_php/.env" "$BACKEND_PATH/.env"
   elif [ -f "$BACKEND_PATH/.env.example" ]; then
     cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
@@ -65,11 +66,8 @@ fi
 
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
-# 2. Generar el API Bridge en DOC_ROOT/api y DOC_ROOT/backend_php
-# Eliminar cualquier copia/puente legado de backend_php dentro de public_html
-rm -rf "$DOC_ROOT/backend_php" 2>/dev/null || true
-
-for BRIDGE_DIR in "$DOC_ROOT/api"; do
+# 2. Generar el API Bridge en DOC_ROOT/backend-catalogo
+for BRIDGE_DIR in "$DOC_ROOT/backend-catalogo"; do
   mkdir -p "$BRIDGE_DIR"
   rm -rf "$BRIDGE_DIR/vendor" "$BRIDGE_DIR/controllers" "$BRIDGE_DIR/config" \
          "$BRIDGE_DIR/middleware" "$BRIDGE_DIR/models" "$BRIDGE_DIR/helpers" \
@@ -128,10 +126,8 @@ find "$BACKEND_PATH" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$BACKEND_PATH" -type f -exec chmod 644 {} + 2>/dev/null || true
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
-# 4. Asegurar permisos en el dominio y en public_html (elimina el 403 Forbidden de LiteSpeed)
-chmod 755 "$(dirname "$DOC_ROOT")" 2>/dev/null || true
-chmod 755 "$DOC_ROOT" 2>/dev/null || true
-find "$DOC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
-find "$DOC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+# 4. Asegurar permisos únicamente en la carpeta del bridge (para no alterar otros archivos de tiendaintima.com)
+chmod 755 "$DOC_ROOT/backend-catalogo" 2>/dev/null || true
+chmod 644 "$DOC_ROOT/backend-catalogo/index.php" "$DOC_ROOT/backend-catalogo/.htaccess" 2>/dev/null || true
 
 echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."

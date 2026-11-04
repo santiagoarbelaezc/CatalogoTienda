@@ -40,13 +40,22 @@ final class Cors
     {
         $raw = $_ENV['CORS_ALLOWED_ORIGINS'] ?? '';
 
+        $defaults = [
+            'https://catalogo.tiendaintima.com',
+            'https://tiendaintima.com',
+            'https://www.tiendaintima.com',
+            'http://localhost:4200',
+        ];
+
         if ($raw === '') {
-            return [];
+            return $defaults;
         }
 
-        return array_map(
+        $configured = array_map(
             'trim',
             explode(',', $raw)
         );
+
+        return array_unique(array_merge($defaults, $configured));
     }
 }

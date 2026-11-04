@@ -27,9 +27,9 @@ jobs:
     name: SSH Connectivity & Path Detection
     runs-on: ubuntu-latest
     outputs:
-      doc_root: ${{ steps.detect.outputs.doc_root }}
+      frontend_docroot: ${{ steps.detect.outputs.frontend_docroot }}
       backend_path: ${{ steps.detect.outputs.backend_path }}
-      base_path: ${{ steps.detect.outputs.base_path }}
+      backend_docroot: ${{ steps.detect.outputs.backend_docroot }}
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -93,20 +93,20 @@ jobs:
             exit 1
           fi
 
-          DOC_ROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
-          BACKEND_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php"
-          BASE_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com"
+          FRONTEND_DOCROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
+          BACKEND_PATH="/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo"
+          BACKEND_DOCROOT="/home/$SSH_USER/domains/tiendaintima.com/public_html"
 
           echo "Rutas fijadas en Hostinger:"
-          echo " - DOC_ROOT:     $DOC_ROOT"
-          echo " - BACKEND_PATH: $BACKEND_PATH"
-          echo " - BASE_PATH:    $BASE_PATH"
+          echo " - FRONTEND_DOCROOT: $FRONTEND_DOCROOT"
+          echo " - BACKEND_PATH:    $BACKEND_PATH"
+          echo " - BACKEND_DOCROOT: $BACKEND_DOCROOT"
 
-          RUN_SSH "mkdir -p '$DOC_ROOT' '$BACKEND_PATH' && chmod 755 '$BASE_PATH' '$DOC_ROOT' '$BACKEND_PATH' 2>/dev/null || true"
+          RUN_SSH "mkdir -p '$FRONTEND_DOCROOT' '$BACKEND_PATH' '$BACKEND_DOCROOT/backend-catalogo' && chmod 755 '$FRONTEND_DOCROOT' '$BACKEND_PATH' '$BACKEND_DOCROOT/backend-catalogo' 2>/dev/null || true"
 
-          echo "doc_root=$DOC_ROOT" >> "$GITHUB_OUTPUT"
+          echo "frontend_docroot=$FRONTEND_DOCROOT" >> "$GITHUB_OUTPUT"
           echo "backend_path=$BACKEND_PATH" >> "$GITHUB_OUTPUT"
-          echo "base_path=$BASE_PATH" >> "$GITHUB_OUTPUT"
+          echo "backend_docroot=$BACKEND_DOCROOT" >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
   # 2. DEPLOY FRONTEND (SPA)
@@ -122,7 +122,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
-      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
+      FRONTEND_DOCROOT: ${{ needs.ssh-check.outputs.frontend_docroot }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -195,7 +195,7 @@ jobs:
             fi
           }
 
-          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
+          TARGET_DOCROOT="${FRONTEND_DOCROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
           if [ -z "$TARGET_DOCROOT" ] || [ "$TARGET_DOCROOT" = "/" ] || [ "$TARGET_DOCROOT" = "." ]; then
             echo "::error::TARGET_DOCROOT inválido: '$TARGET_DOCROOT'. Abortando."
             exit 1
@@ -265,7 +265,7 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
+      BACKEND_DOCROOT: ${{ needs.ssh-check.outputs.backend_docroot }}
       BACKEND_PATH: ${{ needs.ssh-check.outputs.backend_path }}
     steps:
       - name: Checkout Repository
@@ -342,7 +342,7 @@ jobs:
             fi
           }
 
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php}"
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo}"
           if [ -z "$TARGET_BACKEND" ] || [ "$TARGET_BACKEND" = "/" ] || [ "$TARGET_BACKEND" = "." ]; then
             echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando."
             exit 1
@@ -374,8 +374,8 @@ jobs:
 
       - name: Configure Remote .env, Generate API Bridge & Set Permissions
         run: |
-          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php}"
+          TARGET_DOCROOT="${BACKEND_DOCROOT:-/home/$SSH_USER/domains/tiendaintima.com/public_html}"
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo}"
 
           chmod +x .github/scripts/remote-deploy.sh
 
@@ -406,7 +406,7 @@ jobs:
         run: |
           echo "Verificando endpoint de salud de la API..."
           sleep 3
-          HEALTH_URL="https://catalogo.tiendaintima.com/api/health"
+          HEALTH_URL="https://tiendaintima.com/backend-catalogo/health"
           echo "Probando: $HEALTH_URL"
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
           echo "HTTP Status Code: $STATUS_CODE"
