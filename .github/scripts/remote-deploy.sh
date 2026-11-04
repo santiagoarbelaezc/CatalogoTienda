@@ -1,37 +1,36 @@
 #!/usr/bin/env bash
 set -e
-BACKEND_PATH="$1"
+API_DIR="$1"
 DOC_ROOT="$2"
 DB_NAME="$3"
 DB_USER="$4"
 DB_PASSWORD="$5"
 
-echo "=== Configurando entorno remoto ==="
-echo "Backend Path: $BACKEND_PATH"
-echo "Doc Root:     $DOC_ROOT"
+echo "=== Configurando entorno remoto (Backend en public_html/api) ==="
+echo "API Dir:   $API_DIR"
+echo "Doc Root:  $DOC_ROOT"
 
-if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ] || [ -z "$DOC_ROOT" ] || [ "$DOC_ROOT" = "/" ]; then
-  echo "::error::Rutas inválidas en remote-deploy.sh: BACKEND_PATH='$BACKEND_PATH', DOC_ROOT='$DOC_ROOT'"
+if [ -z "$API_DIR" ] || [ "$API_DIR" = "/" ] || [ -z "$DOC_ROOT" ] || [ "$DOC_ROOT" = "/" ]; then
+  echo "::error::Rutas inválidas en remote-deploy.sh: API_DIR='$API_DIR', DOC_ROOT='$DOC_ROOT'"
   exit 1
 fi
 
-mkdir -p "$BACKEND_PATH" "$DOC_ROOT"
+mkdir -p "$API_DIR" "$DOC_ROOT"
 
-# 1. Configurar archivo .env en la carpeta privada
-if [ ! -f "$BACKEND_PATH/.env" ]; then
-  if [ -f "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" ]; then
-    cp "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" "$BACKEND_PATH/.env"
+# 1. Configurar archivo .env en public_html/api/
+if [ ! -f "$API_DIR/.env" ]; then
+  if [ -f "$HOME/domains/tiendaintima.com/backend-catalogo/.env" ]; then
+    cp "$HOME/domains/tiendaintima.com/backend-catalogo/.env" "$API_DIR/.env"
+  elif [ -f "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" ]; then
+    cp "$HOME/domains/catalogo.tiendaintima.com/backend_php/.env" "$API_DIR/.env"
   elif [ -f "$HOME/backend_php/.env" ]; then
-    cp "$HOME/backend_php/.env" "$BACKEND_PATH/.env"
-  elif [ -f "$BACKEND_PATH/.env.example" ]; then
-    cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
-  elif [ -f "$DOC_ROOT/.env" ]; then
-    cp "$DOC_ROOT/.env" "$BACKEND_PATH/.env"
+    cp "$HOME/backend_php/.env" "$API_DIR/.env"
+  elif [ -f "$API_DIR/.env.example" ]; then
+    cp "$API_DIR/.env.example" "$API_DIR/.env"
   fi
 fi
 
-# Configuración segura de .env usando utilidades POSIX estándar (inmune a '&', '#', '/' sin depender de php CLI)
-ENV_FILE="$BACKEND_PATH/.env"
+ENV_FILE="$API_DIR/.env"
 touch "$ENV_FILE"
 
 set_env_var() {
@@ -42,7 +41,6 @@ set_env_var() {
   mv "${ENV_FILE}.tmp" "$ENV_FILE"
 }
 
-# Forzar DB_HOST=localhost para Hostinger (evita error 504)
 set_env_var "DB_HOST" "localhost"
 
 if [ -n "$DB_NAME" ]; then
@@ -56,90 +54,83 @@ if [ -n "$DB_PASSWORD" ]; then
 fi
 
 echo "[OK] Variables de entorno configuradas exitosamente en $ENV_FILE"
+chmod 600 "$ENV_FILE" 2>/dev/null || true
 
-if grep -qE '^DB_NAME=(nombre_de_tu_bd)?$|^DB_USER=(tu_usuario_bd)?$|^DB_PASS="?your_db_password_here"?$' "$ENV_FILE"; then
-  echo "::warning::El .env remoto aún tiene credenciales de BD de ejemplo. Define los secretos DB_NAME, DB_USER y DB_PASSWORD en GitHub o edita $ENV_FILE."
-fi
-if grep -q '^JWT_SECRET=change_this' "$ENV_FILE"; then
-  echo "::warning::JWT_SECRET sigue con el valor de ejemplo en $ENV_FILE."
-fi
-
-chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
-
-# 2. Generar el API Bridge en DOC_ROOT/backend-catalogo
-for BRIDGE_DIR in "$DOC_ROOT/backend-catalogo"; do
-  mkdir -p "$BRIDGE_DIR"
-  rm -rf "$BRIDGE_DIR/vendor" "$BRIDGE_DIR/controllers" "$BRIDGE_DIR/config" \
-         "$BRIDGE_DIR/middleware" "$BRIDGE_DIR/models" "$BRIDGE_DIR/helpers" \
-         "$BRIDGE_DIR/database" "$BRIDGE_DIR/src" "$BRIDGE_DIR/.env" 2>/dev/null || true
-
-  cat << 'EOF_BRIDGE_INDEX' > "$BRIDGE_DIR/index.php"
-<?php
-declare(strict_types=1);
-/**
- * API Bridge - Reenvío hacia el backend protegido fuera de public_html
- */
-EOF_BRIDGE_INDEX
-  echo "\$backendRoot = '$BACKEND_PATH';" >> "$BRIDGE_DIR/index.php"
-  cat << 'EOF_BRIDGE_BODY' >> "$BRIDGE_DIR/index.php"
-if (!file_exists($backendRoot . "/index.php")) {
-    http_response_code(500);
-    header("Content-Type: application/json; charset=utf-8");
-    echo json_encode(["success" => false, "error" => "API Bridge: Backend principal no encontrado en carpeta protegida."]);
-    exit;
-}
-require_once $backendRoot . "/index.php";
-EOF_BRIDGE_BODY
-
-  PREFIX=$(basename "$BRIDGE_DIR")
-  cat << EOF_BRIDGE_HTACCESS > "$BRIDGE_DIR/.htaccess"
-# CloudLinux / LiteSpeed alt-php83 handler con extensiones de PHP Selector
-<IfModule mime_module>
-  AddHandler application/x-httpd-alt-php83___ .php .php8 .phtml
-</IfModule>
-<IfModule mod_env.c>
-  SetEnv PHP_INI_SCAN_DIR /opt/alt/php83/etc/php.d
-</IfModule>
+# 2. Configurar .htaccess blindado en public_html/api
+cat << 'EOF_API_HTACCESS' > "$API_DIR/.htaccess"
+# ============================================================
+# Protección Integral de API Backend (public_html/api)
+# Solo permite el flujo de la API a través de index.php
+# ============================================================
 
 Options -Indexes -MultiViews
 DirectoryIndex index.php
-RewriteEngine On
-RewriteBase /$PREFIX/
 
-# Preservar cabecera Authorization (crítico para JWT en Apache/LiteSpeed)
-RewriteCond %{HTTP:Authorization} ^(.*)
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /api/
 
-# CORS preflight
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ index.php [QSA,L]
+  # 1. Bloqueo estricto de directorios internos sensibles
+  RewriteRule ^(src|vendor|database|config|controllers|middleware|models|helpers|tests|logs)(/.*)?$ - [F,L,NC]
 
-# Excepción para /config
-RewriteRule ^config(/.*)?$ index.php [QSA,L]
+  # 2. Bloqueo estricto de archivos de configuración y metadatos
+  RewriteRule (^|/)(\.env.*|\.git.*|composer\.(json|lock)|package(-lock)?\.json|\.md|\.sql|\.log|\.ya?ml)$ - [F,L,NC]
 
-# Enrutar todo al router index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ index.php [QSA,L]
-EOF_BRIDGE_HTACCESS
+  # 3. Preservar cabecera Authorization (imprescindible para tokens JWT)
+  RewriteCond %{HTTP:Authorization} ^(.*)
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 
-  chmod 755 "$BRIDGE_DIR"
-  chmod 644 "$BRIDGE_DIR/index.php" "$BRIDGE_DIR/.htaccess"
-  echo "[OK] API Bridge configurado en $BRIDGE_DIR"
-done
+  # 4. Manejo de peticiones CORS preflight (OPTIONS)
+  RewriteCond %{REQUEST_METHOD} OPTIONS
+  RewriteRule ^(.*)$ index.php [QSA,L]
 
-# 3. Directorio de subidas y permisos del backend
-mkdir -p "$BACKEND_PATH/uploads"
-chmod 775 "$BACKEND_PATH/uploads" 2>/dev/null || true
-find "$BACKEND_PATH" -type d -exec chmod 755 {} + 2>/dev/null || true
-find "$BACKEND_PATH" -type f -exec chmod 644 {} + 2>/dev/null || true
-chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
+  # 5. Enrutar todas las llamadas de la API a index.php
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
 
-# 4. Asegurar permisos únicamente en la carpeta del bridge (para no alterar otros archivos de tiendaintima.com)
-chmod 755 "$DOC_ROOT/backend-catalogo" 2>/dev/null || true
-chmod 644 "$DOC_ROOT/backend-catalogo/index.php" "$DOC_ROOT/backend-catalogo/.htaccess" 2>/dev/null || true
+# Bloqueo adicional por FilesMatch
+<FilesMatch "(^\.|\.env|composer\.(json|lock)|package(-lock)?\.json|\.md|\.sql|\.log|\.ya?ml)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order Allow,Deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+EOF_API_HTACCESS
 
-# 5. Reiniciar procesos cacheados de LiteSpeed PHP para obligar a recargar php.ini y extensiones
-echo "Reiniciando procesos LSPHP del usuario para refrescar extensiones..."
+# 3. Protección adicional interna para src/
+if [ -d "$API_DIR/src" ]; then
+  cat << 'EOF_SRC_HTACCESS' > "$API_DIR/src/.htaccess"
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order Allow,Deny
+  Deny from all
+</IfModule>
+EOF_SRC_HTACCESS
+fi
+
+# 4. Permisos estrictos de directorios y archivos
+mkdir -p "$API_DIR/uploads"
+chmod 775 "$API_DIR/uploads" 2>/dev/null || true
+
+find "$API_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$API_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
+chmod 600 "$API_DIR/.env" 2>/dev/null || true
+
+# 5. Permisos en public_html
+chmod 755 "$DOC_ROOT" 2>/dev/null || true
+if [ -f "$DOC_ROOT/.htaccess" ]; then
+  chmod 644 "$DOC_ROOT/.htaccess" 2>/dev/null || true
+fi
+
+# 6. Reiniciar procesos cacheados de LiteSpeed PHP
+echo "Reiniciando procesos LSPHP del usuario..."
 killall -9 lsphp 2>/dev/null || pkill -9 -u "$USER" lsphp 2>/dev/null || true
 
-echo "[OK] Despliegue de Backend y API Bridge finalizado exitosamente."
+echo "[OK] Despliegue de Backend en public_html/api finalizado exitosamente."

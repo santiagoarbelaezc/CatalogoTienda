@@ -27,9 +27,8 @@ jobs:
     name: SSH Connectivity & Path Detection
     runs-on: ubuntu-latest
     outputs:
-      frontend_docroot: ${{ steps.detect.outputs.frontend_docroot }}
-      backend_path: ${{ steps.detect.outputs.backend_path }}
-      backend_docroot: ${{ steps.detect.outputs.backend_docroot }}
+      doc_root: ${{ steps.detect.outputs.doc_root }}
+      api_dir: ${{ steps.detect.outputs.api_dir }}
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -93,20 +92,17 @@ jobs:
             exit 1
           fi
 
-          FRONTEND_DOCROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
-          BACKEND_PATH="/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo"
-          BACKEND_DOCROOT="/home/$SSH_USER/domains/tiendaintima.com/public_html"
+          DOC_ROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
+          API_DIR="$DOC_ROOT/api"
 
           echo "Rutas fijadas en Hostinger:"
-          echo " - FRONTEND_DOCROOT: $FRONTEND_DOCROOT"
-          echo " - BACKEND_PATH:    $BACKEND_PATH"
-          echo " - BACKEND_DOCROOT: $BACKEND_DOCROOT"
+          echo " - DOC_ROOT: $DOC_ROOT"
+          echo " - API_DIR:  $API_DIR"
 
-          RUN_SSH "mkdir -p '$FRONTEND_DOCROOT' '$BACKEND_PATH' '$BACKEND_DOCROOT/backend-catalogo' && chmod 755 '$FRONTEND_DOCROOT' '$BACKEND_PATH' '$BACKEND_DOCROOT/backend-catalogo' 2>/dev/null || true"
+          RUN_SSH "mkdir -p '$DOC_ROOT' '$API_DIR' && chmod 755 '$DOC_ROOT' '$API_DIR' 2>/dev/null || true"
 
-          echo "frontend_docroot=$FRONTEND_DOCROOT" >> "$GITHUB_OUTPUT"
-          echo "backend_path=$BACKEND_PATH" >> "$GITHUB_OUTPUT"
-          echo "backend_docroot=$BACKEND_DOCROOT" >> "$GITHUB_OUTPUT"
+          echo "doc_root=$DOC_ROOT" >> "$GITHUB_OUTPUT"
+          echo "api_dir=$API_DIR" >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
   # 2. DEPLOY FRONTEND (SPA)
@@ -122,7 +118,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
-      FRONTEND_DOCROOT: ${{ needs.ssh-check.outputs.frontend_docroot }}
+      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -195,7 +191,7 @@ jobs:
             fi
           }
 
-          TARGET_DOCROOT="${FRONTEND_DOCROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
           if [ -z "$TARGET_DOCROOT" ] || [ "$TARGET_DOCROOT" = "/" ] || [ "$TARGET_DOCROOT" = "." ]; then
             echo "::error::TARGET_DOCROOT inválido: '$TARGET_DOCROOT'. Abortando."
             exit 1
@@ -249,10 +245,10 @@ jobs:
           echo "Frontend sincronizado exitosamente."
 
   # ──────────────────────────────────────────────────────────
-  # 3. DEPLOY BACKEND (PHP Core Fuera de public_html + API Bridge)
+  # 3. DEPLOY BACKEND (public_html/api)
   # ──────────────────────────────────────────────────────────
   deploy-backend:
-    name: Deploy Backend & API Bridge
+    name: Deploy Backend (public_html/api)
     needs: [ssh-check, deploy-frontend]
     if: needs.ssh-check.result == 'success'
     runs-on: ubuntu-latest
@@ -265,8 +261,8 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      BACKEND_DOCROOT: ${{ needs.ssh-check.outputs.backend_docroot }}
-      BACKEND_PATH: ${{ needs.ssh-check.outputs.backend_path }}
+      DOC_ROOT: ${{ needs.ssh-check.outputs.doc_root }}
+      API_DIR: ${{ needs.ssh-check.outputs.api_dir }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -332,7 +328,7 @@ jobs:
           } > ~/.ssh/config
           chmod 600 ~/.ssh/config
 
-      - name: Deploy Backend Core to Isolated Directory
+      - name: Deploy Backend to public_html/api
         run: |
           RUN_RSYNC() {
             if [ -n "$SSH_KEY" ]; then
@@ -342,14 +338,14 @@ jobs:
             fi
           }
 
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo}"
-          if [ -z "$TARGET_BACKEND" ] || [ "$TARGET_BACKEND" = "/" ] || [ "$TARGET_BACKEND" = "." ]; then
-            echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando."
+          TARGET_API="${API_DIR:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html/api}"
+          if [ -z "$TARGET_API" ] || [ "$TARGET_API" = "/" ] || [ "$TARGET_API" = "." ]; then
+            echo "::error::TARGET_API inválido: '$TARGET_API'. Abortando."
             exit 1
           fi
 
           BDIR="${{ steps.locate.outputs.dir }}"
-          echo "Desplegando en carpeta privada $TARGET_BACKEND/..."
+          echo "Desplegando backend en $TARGET_API/..."
 
           SUCCESS=0
           for attempt in 1 2 3; do
@@ -359,7 +355,7 @@ jobs:
               --exclude='.env.local' \
               --exclude='uploads/' \
               --exclude='.git*' \
-              "$BDIR/" production:"$TARGET_BACKEND/"; then
+              "$BDIR/" production:"$TARGET_API/"; then
               SUCCESS=1
               break
             fi
@@ -372,10 +368,10 @@ jobs:
             exit 1
           fi
 
-      - name: Configure Remote .env, Generate API Bridge & Set Permissions
+      - name: Configure Remote .env, Security & Permissions
         run: |
-          TARGET_DOCROOT="${BACKEND_DOCROOT:-/home/$SSH_USER/domains/tiendaintima.com/public_html}"
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/tiendaintima.com/backend-catalogo}"
+          TARGET_API="${API_DIR:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html/api}"
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
 
           chmod +x .github/scripts/remote-deploy.sh
 
@@ -383,12 +379,12 @@ jobs:
           for attempt in 1 2 3; do
             echo "Configurando entorno remoto (intento $attempt de 3)..."
             if [ -n "$SSH_KEY" ]; then
-              if ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
+              if ssh production "bash -s -- '$TARGET_API' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
                 SUCCESS=1
                 break
               fi
             else
-              if sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
+              if sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_API' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
                 SUCCESS=1
                 break
               fi
@@ -406,7 +402,7 @@ jobs:
         run: |
           echo "Verificando endpoint de salud de la API..."
           sleep 3
-          HEALTH_URL="https://tiendaintima.com/backend-catalogo/health"
+          HEALTH_URL="https://catalogo.tiendaintima.com/api/health"
           echo "Probando: $HEALTH_URL"
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
           echo "HTTP Status Code: $STATUS_CODE"

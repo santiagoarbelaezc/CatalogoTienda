@@ -1,12 +1,42 @@
+# ============================================================
+# Protección Integral de API Backend (public_html/api)
+# Solo permite el flujo de la API a través de index.php
+# ============================================================
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
 <IfModule mod_rewrite.c>
-    RewriteEngine On
+  RewriteEngine On
+  RewriteBase /api/
 
-    # Preservar cabecera Authorization
-    RewriteCond %{HTTP:Authorization} ^(.*)
-    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+  # 1. Bloqueo estricto de directorios internos sensibles
+  RewriteRule ^(src|vendor|database|config|controllers|middleware|models|helpers|tests|logs)(/.*)?$ - [F,L,NC]
 
-    RewriteRule ^$ public/index.php [L]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/index.php [QSA,L]
+  # 2. Bloqueo estricto de archivos de configuración y metadatos
+  RewriteRule (^|/)(\.env.*|\.git.*|composer\.(json|lock)|package(-lock)?\.json|\.md|\.sql|\.log|\.ya?ml)$ - [F,L,NC]
+
+  # 3. Preservar cabecera Authorization (imprescindible para tokens JWT)
+  RewriteCond %{HTTP:Authorization} ^(.*)
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
+  # 4. Manejo de peticiones CORS preflight (OPTIONS)
+  RewriteCond %{REQUEST_METHOD} OPTIONS
+  RewriteRule ^(.*)$ index.php [QSA,L]
+
+  # 5. Enrutar todas las llamadas de la API a index.php
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
+
+# Bloqueo adicional por FilesMatch
+<FilesMatch "(^\.|\.env|composer\.(json|lock)|package(-lock)?\.json|\.md|\.sql|\.log|\.ya?ml)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order Allow,Deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
