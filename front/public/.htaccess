@@ -1,11 +1,9 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  # 1. Reglas directas para el API Bridge (no interceptar)
-  RewriteRule ^backend_php/(.*)$ backend_php/index.php [QSA,L]
+  # 1. Regla directa para el API Bridge (no interceptar)
   RewriteRule ^api/(.*)$ api/index.php [QSA,L]
   # 2. Exclusiones de la SPA para archivos existentes y rutas API
-  RewriteCond %{REQUEST_URI} ^/backend_php [NC,OR]
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

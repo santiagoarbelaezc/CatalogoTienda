@@ -56,7 +56,10 @@ echo "[OK] Variables de entorno configuradas exitosamente en $ENV_FILE"
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
 # 2. Generar el API Bridge en DOC_ROOT/api y DOC_ROOT/backend_php
-for BRIDGE_DIR in "$DOC_ROOT/api" "$DOC_ROOT/backend_php"; do
+# Eliminar cualquier copia/puente legado de backend_php dentro de public_html
+rm -rf "$DOC_ROOT/backend_php" 2>/dev/null || true
+
+for BRIDGE_DIR in "$DOC_ROOT/api"; do
   mkdir -p "$BRIDGE_DIR"
   rm -rf "$BRIDGE_DIR/vendor" "$BRIDGE_DIR/controllers" "$BRIDGE_DIR/config" \
          "$BRIDGE_DIR/middleware" "$BRIDGE_DIR/models" "$BRIDGE_DIR/helpers" \

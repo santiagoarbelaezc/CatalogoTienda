@@ -81,7 +81,7 @@ jobs:
           RUN_SSH "echo 'SSH exitoso.'"
 
           DOC_ROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
-          BACKEND_PATH="/home/$SSH_USER/backend_php"
+          BACKEND_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php"
           BASE_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com"
 
           echo "Rutas fijadas en Hostinger:"
@@ -216,8 +216,6 @@ jobs:
             if RUN_RSYNC --delete \
               --filter='protect /api' \
               --filter='protect /api/**' \
-              --filter='protect /backend_php' \
-              --filter='protect /backend_php/**' \
               "$DIST_DIR/" production:"$TARGET_DOCROOT/"; then
               SUCCESS=1
               break
@@ -331,7 +329,7 @@ jobs:
             fi
           }
 
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php}"
           if [ -z "$TARGET_BACKEND" ] || [ "$TARGET_BACKEND" = "/" ] || [ "$TARGET_BACKEND" = "." ]; then
             echo "::error::TARGET_BACKEND inválido: '$TARGET_BACKEND'. Abortando."
             exit 1
@@ -364,7 +362,7 @@ jobs:
       - name: Configure Remote .env, Generate API Bridge & Set Permissions
         run: |
           TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
-          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
+          TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php}"
 
           chmod +x .github/scripts/remote-deploy.sh
 
