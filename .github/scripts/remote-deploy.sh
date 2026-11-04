@@ -26,40 +26,32 @@ if [ ! -f "$BACKEND_PATH/.env" ]; then
   fi
 fi
 
-# Configuración segura de .env usando PHP CLI (inmune a caracteres especiales como '&', '#', comillas)
-php -r '
-$envFile = $argv[1];
-$dbName  = $argv[2] ?? "";
-$dbUser  = $argv[3] ?? "";
-$dbPass  = $argv[4] ?? "";
+# Configuración segura de .env usando utilidades POSIX estándar (inmune a '&', '#', '/' sin depender de php CLI)
+ENV_FILE="$BACKEND_PATH/.env"
+touch "$ENV_FILE"
 
-if (!file_exists($envFile)) {
-    touch($envFile);
-}
-$content = file_get_contents($envFile);
-
-// Forzar DB_HOST=localhost para Hostinger (evita error 504)
-if (preg_match("/^DB_HOST=.*/m", $content)) {
-    $content = preg_replace("/^DB_HOST=.*/m", "DB_HOST=localhost", $content);
-} else {
-    $content .= "\nDB_HOST=localhost\n";
+set_env_var() {
+  local key="$1"
+  local val="$2"
+  grep -v "^${key}=" "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || true
+  printf '%s=%s\n' "$key" "$val" >> "${ENV_FILE}.tmp"
+  mv "${ENV_FILE}.tmp" "$ENV_FILE"
 }
 
-$vars = [];
-if ($dbName !== "") $vars["DB_NAME"] = $dbName;
-if ($dbUser !== "") $vars["DB_USER"] = $dbUser;
-if ($dbPass !== "") $vars["DB_PASS"] = "\"" . addcslashes($dbPass, "\"\\$") . "\"";
+# Forzar DB_HOST=localhost para Hostinger (evita error 504)
+set_env_var "DB_HOST" "localhost"
 
-foreach ($vars as $key => $val) {
-    if (preg_match("/^" . $key . "=.*/m", $content)) {
-        $content = preg_replace("/^" . $key . "=.*/m", $key . "=" . $val, $content);
-    } else {
-        $content .= "\n" . $key . "=" . $val . "\n";
-    }
-}
-file_put_contents($envFile, $content);
-echo "[OK] Variables de entorno configuradas exitosamente en $envFile\n";
-' "$BACKEND_PATH/.env" "$DB_NAME" "$DB_USER" "$DB_PASSWORD"
+if [ -n "$DB_NAME" ]; then
+  set_env_var "DB_NAME" "$DB_NAME"
+fi
+if [ -n "$DB_USER" ]; then
+  set_env_var "DB_USER" "$DB_USER"
+fi
+if [ -n "$DB_PASSWORD" ]; then
+  set_env_var "DB_PASS" "\"$DB_PASSWORD\""
+fi
+
+echo "[OK] Variables de entorno configuradas exitosamente en $ENV_FILE"
 
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
