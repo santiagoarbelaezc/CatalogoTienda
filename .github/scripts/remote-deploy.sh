@@ -115,7 +115,28 @@ if [ -d "$API_DIR/src" ]; then
 EOF_SRC_HTACCESS
 fi
 
-# 4. Permisos estrictos de directorios y archivos
+# 4. Crear php.ini y .user.ini para forzar carga de módulos PDO en LiteSpeed
+for INI_DIR in "$DOC_ROOT" "$API_DIR"; do
+  cat << 'EOF_INI' > "$INI_DIR/php.ini"
+[PHP]
+extension=/opt/alt/php83/usr/lib64/php/modules/pdo.so
+extension=/opt/alt/php83/usr/lib64/php/modules/mysqlnd.so
+extension=/opt/alt/php83/usr/lib64/php/modules/nd_pdo_mysql.so
+extension=/opt/alt/php83/usr/lib64/php/modules/nd_mysqli.so
+EOF_INI
+
+  cat << 'EOF_USER_INI' > "$INI_DIR/.user.ini"
+[PHP]
+extension=/opt/alt/php83/usr/lib64/php/modules/pdo.so
+extension=/opt/alt/php83/usr/lib64/php/modules/mysqlnd.so
+extension=/opt/alt/php83/usr/lib64/php/modules/nd_pdo_mysql.so
+extension=/opt/alt/php83/usr/lib64/php/modules/nd_mysqli.so
+EOF_USER_INI
+
+  chmod 644 "$INI_DIR/php.ini" "$INI_DIR/.user.ini" 2>/dev/null || true
+done
+
+# 5. Permisos estrictos de directorios y archivos
 mkdir -p "$API_DIR/uploads"
 chmod 775 "$API_DIR/uploads" 2>/dev/null || true
 
