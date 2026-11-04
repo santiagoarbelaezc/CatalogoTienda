@@ -65,12 +65,16 @@ jobs:
 
       - name: Test Remote Connection & Setup Paths
         id: detect
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
+          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
+
           RUN_SSH() {
             if [ -n "$SSH_KEY" ]; then
               ssh production "$@"
             else
-              sshpass -p "$SSH_PASSWORD" ssh production "$@"
+              sshpass -e ssh production "$@"
             fi
           }
 
@@ -81,7 +85,7 @@ jobs:
           BACKEND_PATH="/home/$SSH_USER/backend_php"
           BASE_PATH="/home/$SSH_USER"
 
-          echo "Rutas fijadas según estructura de Hostinger:"
+          echo "Rutas fijadas en Hostinger:"
           echo " - DOC_ROOT:     $DOC_ROOT"
           echo " - BACKEND_PATH: $BACKEND_PATH"
           echo " - BASE_PATH:    $BASE_PATH"
@@ -167,12 +171,16 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy Frontend via Rsync
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
+          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
+
           RUN_RSYNC() {
             if [ -n "$SSH_KEY" ]; then
-              rsync "$@"
+              rsync -avz --chmod=D755,F644 -e "ssh -o StrictHostKeyChecking=no" "$@"
             else
-              sshpass -p "$SSH_PASSWORD" rsync "$@"
+              rsync -avz --chmod=D755,F644 -e "sshpass -e ssh -o StrictHostKeyChecking=no" "$@"
             fi
           }
 
@@ -183,28 +191,28 @@ jobs:
           fi
 
           FDIR="${{ steps.locate.outputs.dir }}"
-          DIST_DIR="$FDIR/dist/front/browser"
-          if [ ! -d "$DIST_DIR" ]; then
+          DIST_DIR=""
+          if [ -d "$FDIR/dist/front/browser" ]; then
+            DIST_DIR="$FDIR/dist/front/browser"
+          elif [ -d "$FDIR/dist/frontend/browser" ]; then
             DIST_DIR="$FDIR/dist/frontend/browser"
-          fi
-          if [ ! -d "$DIST_DIR" ]; then
+          elif [ -d "$FDIR/dist/browser" ]; then
             DIST_DIR="$FDIR/dist/browser"
-          fi
-          if [ ! -d "$DIST_DIR" ]; then
+          elif [ -d "$FDIR/dist/front" ]; then
             DIST_DIR="$FDIR/dist/front"
-          fi
-          if [ ! -d "$DIST_DIR" ]; then
+          elif [ -d "$FDIR/dist/frontend" ]; then
             DIST_DIR="$FDIR/dist/frontend"
-          fi
-          if [ ! -d "$DIST_DIR" ]; then
+          elif [ -d "$FDIR/dist" ]; then
             DIST_DIR="$FDIR/dist"
           fi
 
           echo "Directorio de compilación detectado: $DIST_DIR"
+          echo "Contenido generado:"
+          ls -la "$DIST_DIR"
+
           echo "Sincronizando frontend hacia $TARGET_DOCROOT/..."
 
-          # Sincronizar hacia DOC_ROOT protegiendo el API Bridge
-          RUN_RSYNC -avz --delete \
+          RUN_RSYNC --delete \
             --filter='protect /api' \
             --filter='protect /api/**' \
             --filter='protect /backend_php' \
@@ -212,7 +220,7 @@ jobs:
             "$DIST_DIR/" production:"$TARGET_DOCROOT/"
 
           if [ -f "$FDIR/public/.htaccess" ]; then
-            RUN_RSYNC -avz "$FDIR/public/.htaccess" production:"$TARGET_DOCROOT/.htaccess"
+            RUN_RSYNC "$FDIR/public/.htaccess" production:"$TARGET_DOCROOT/.htaccess"
           fi
 
           echo "Frontend sincronizado exitosamente."
@@ -299,12 +307,16 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy Backend Core to Isolated Directory
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
+          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
+
           RUN_RSYNC() {
             if [ -n "$SSH_KEY" ]; then
-              rsync "$@"
+              rsync -avz --chmod=D755,F644 -e "ssh -o StrictHostKeyChecking=no" "$@"
             else
-              sshpass -p "$SSH_PASSWORD" rsync "$@"
+              rsync -avz --chmod=D755,F644 -e "sshpass -e ssh -o StrictHostKeyChecking=no" "$@"
             fi
           }
 
@@ -316,7 +328,7 @@ jobs:
 
           BDIR="${{ steps.locate.outputs.dir }}"
           echo "Desplegando en carpeta privada $TARGET_BACKEND/..."
-          RUN_RSYNC -avz --delete \
+          RUN_RSYNC --delete \
             --exclude='.env' \
             --exclude='.env.local' \
             --exclude='uploads/' \
@@ -324,7 +336,10 @@ jobs:
             "$BDIR/" production:"$TARGET_BACKEND/"
 
       - name: Configure Remote .env, Generate API Bridge & Set Permissions
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
+          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
           TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/public_html}"
           TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
 
@@ -332,7 +347,7 @@ jobs:
           if [ -n "$SSH_KEY" ]; then
             ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           else
-            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            sshpass -e ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           fi
 
       - name: Verify Live API Health
