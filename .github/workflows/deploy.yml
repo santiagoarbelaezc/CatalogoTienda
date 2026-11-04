@@ -56,6 +56,9 @@ jobs:
             echo "  Port $SSH_PORT"
             echo "  StrictHostKeyChecking no"
             echo "  UserKnownHostsFile /dev/null"
+            echo "  ConnectTimeout 30"
+            echo "  ServerAliveInterval 15"
+            echo "  ServerAliveCountMax 4"
             echo "  LogLevel ERROR"
             if [ -n "$SSH_AUTH_CONFIG" ]; then
               echo "  $SSH_AUTH_CONFIG"
@@ -159,6 +162,9 @@ jobs:
             echo "  Port $SSH_PORT"
             echo "  StrictHostKeyChecking no"
             echo "  UserKnownHostsFile /dev/null"
+            echo "  ConnectTimeout 30"
+            echo "  ServerAliveInterval 15"
+            echo "  ServerAliveCountMax 4"
             echo "  LogLevel ERROR"
             if [ -n "$SSH_AUTH_CONFIG" ]; then
               echo "  $SSH_AUTH_CONFIG"
@@ -204,12 +210,26 @@ jobs:
 
           echo "Sincronizando frontend hacia $TARGET_DOCROOT/..."
 
-          RUN_RSYNC --delete \
-            --filter='protect /api' \
-            --filter='protect /api/**' \
-            --filter='protect /backend_php' \
-            --filter='protect /backend_php/**' \
-            "$DIST_DIR/" production:"$TARGET_DOCROOT/"
+          SUCCESS=0
+          for attempt in 1 2 3; do
+            echo "Intento de sincronización frontend $attempt de 3..."
+            if RUN_RSYNC --delete \
+              --filter='protect /api' \
+              --filter='protect /api/**' \
+              --filter='protect /backend_php' \
+              --filter='protect /backend_php/**' \
+              "$DIST_DIR/" production:"$TARGET_DOCROOT/"; then
+              SUCCESS=1
+              break
+            fi
+            echo "Conexión SSH no completada. Reintentando en 6 segundos..."
+            sleep 6
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "::error::Falló la sincronización del frontend tras 3 intentos."
+            exit 1
+          fi
 
           if [ -f "$FDIR/public/.htaccess" ]; then
             RUN_RSYNC "$FDIR/public/.htaccess" production:"$TARGET_DOCROOT/.htaccess"
@@ -291,6 +311,9 @@ jobs:
             echo "  Port $SSH_PORT"
             echo "  StrictHostKeyChecking no"
             echo "  UserKnownHostsFile /dev/null"
+            echo "  ConnectTimeout 30"
+            echo "  ServerAliveInterval 15"
+            echo "  ServerAliveCountMax 4"
             echo "  LogLevel ERROR"
             if [ -n "$SSH_AUTH_CONFIG" ]; then
               echo "  $SSH_AUTH_CONFIG"
@@ -316,12 +339,27 @@ jobs:
 
           BDIR="${{ steps.locate.outputs.dir }}"
           echo "Desplegando en carpeta privada $TARGET_BACKEND/..."
-          RUN_RSYNC --delete \
-            --exclude='.env' \
-            --exclude='.env.local' \
-            --exclude='uploads/' \
-            --exclude='.git*' \
-            "$BDIR/" production:"$TARGET_BACKEND/"
+
+          SUCCESS=0
+          for attempt in 1 2 3; do
+            echo "Intento de sincronización $attempt de 3..."
+            if RUN_RSYNC --delete \
+              --exclude='.env' \
+              --exclude='.env.local' \
+              --exclude='uploads/' \
+              --exclude='.git*' \
+              "$BDIR/" production:"$TARGET_BACKEND/"; then
+              SUCCESS=1
+              break
+            fi
+            echo "Conexión SSH no completada. Reintentando en 6 segundos..."
+            sleep 6
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "::error::Falló la sincronización con el servidor remoto tras 3 intentos."
+            exit 1
+          fi
 
       - name: Configure Remote .env, Generate API Bridge & Set Permissions
         run: |
@@ -329,10 +367,28 @@ jobs:
           TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
 
           chmod +x .github/scripts/remote-deploy.sh
-          if [ -n "$SSH_KEY" ]; then
-            ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
-          else
-            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+
+          SUCCESS=0
+          for attempt in 1 2 3; do
+            echo "Configurando entorno remoto (intento $attempt de 3)..."
+            if [ -n "$SSH_KEY" ]; then
+              if ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
+                SUCCESS=1
+                break
+              fi
+            else
+              if sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh; then
+                SUCCESS=1
+                break
+              fi
+            fi
+            echo "Reintentando ejecución de script en 6 segundos..."
+            sleep 6
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "::error::Falló la configuración remota tras 3 intentos."
+            exit 1
           fi
 
       - name: Verify Live API Health
