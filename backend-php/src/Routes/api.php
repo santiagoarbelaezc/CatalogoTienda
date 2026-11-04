@@ -30,7 +30,17 @@ $auth = new AuthMiddleware();
 
 // ── Health-check ──────────────────────────────────────────────────────────────
 $router->get('/', fn() => Response::success(['status' => 'ok', 'version' => '1.0.0']));
-$router->get('/health', fn() => Response::success(['status' => 'ok', 'timestamp' => date('c')]));
+$router->get('/health', fn() => Response::success([
+    'status' => 'ok',
+    'timestamp' => date('c'),
+    'php_version' => PHP_VERSION,
+    'php_sapi' => PHP_SAPI,
+    'php_ini' => php_ini_loaded_file(),
+    'pdo_loaded' => class_exists('PDO'),
+    'pdo_drivers' => class_exists('PDO') ? \PDO::getAvailableDrivers() : [],
+    'has_mysqli' => extension_loaded('mysqli'),
+    'loaded_extensions' => get_loaded_extensions(),
+]));
 
 // Event tracking público
 $router->post('/analytics/events', fn() => (new AnalyticsController())->trackEvent());
