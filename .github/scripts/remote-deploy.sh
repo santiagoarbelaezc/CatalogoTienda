@@ -93,6 +93,14 @@ EOF_BRIDGE_BODY
 
   PREFIX=$(basename "$BRIDGE_DIR")
   cat << EOF_BRIDGE_HTACCESS > "$BRIDGE_DIR/.htaccess"
+# CloudLinux / LiteSpeed alt-php83 handler con extensiones de PHP Selector
+<IfModule mime_module>
+  AddHandler application/x-httpd-alt-php83___ .php .php8 .phtml
+</IfModule>
+<IfModule mod_env.c>
+  SetEnv PHP_INI_SCAN_DIR /opt/alt/php83/etc/php.d
+</IfModule>
+
 Options -Indexes -MultiViews
 DirectoryIndex index.php
 RewriteEngine On
