@@ -65,32 +65,28 @@ jobs:
 
       - name: Test Remote Connection & Setup Paths
         id: detect
-        env:
-          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
-
           RUN_SSH() {
             if [ -n "$SSH_KEY" ]; then
               ssh production "$@"
             else
-              sshpass -e ssh production "$@"
+              sshpass -p "$SSH_PASSWORD" ssh production "$@"
             fi
           }
 
           echo "Probando conexión SSH con Hostinger..."
           RUN_SSH "echo 'SSH exitoso.'"
 
-          DOC_ROOT="/home/$SSH_USER/public_html"
+          DOC_ROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
           BACKEND_PATH="/home/$SSH_USER/backend_php"
-          BASE_PATH="/home/$SSH_USER"
+          BASE_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com"
 
           echo "Rutas fijadas en Hostinger:"
           echo " - DOC_ROOT:     $DOC_ROOT"
           echo " - BACKEND_PATH: $BACKEND_PATH"
           echo " - BASE_PATH:    $BASE_PATH"
 
-          RUN_SSH "mkdir -p '$DOC_ROOT' '$BACKEND_PATH'"
+          RUN_SSH "mkdir -p '$DOC_ROOT' '$BACKEND_PATH' && chmod 755 '$BASE_PATH' '$DOC_ROOT' '$BACKEND_PATH' 2>/dev/null || true"
 
           echo "doc_root=$DOC_ROOT" >> "$GITHUB_OUTPUT"
           echo "backend_path=$BACKEND_PATH" >> "$GITHUB_OUTPUT"
@@ -171,20 +167,16 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy Frontend via Rsync
-        env:
-          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
-
           RUN_RSYNC() {
             if [ -n "$SSH_KEY" ]; then
-              rsync -avz --chmod=D755,F644 -e "ssh -o StrictHostKeyChecking=no" "$@"
+              rsync -avz --chmod=D755,F644 "$@"
             else
-              rsync -avz --chmod=D755,F644 -e "sshpass -e ssh -o StrictHostKeyChecking=no" "$@"
+              sshpass -p "$SSH_PASSWORD" rsync -avz --chmod=D755,F644 "$@"
             fi
           }
 
-          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/public_html}"
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
           if [ -z "$TARGET_DOCROOT" ] || [ "$TARGET_DOCROOT" = "/" ] || [ "$TARGET_DOCROOT" = "." ]; then
             echo "::error::TARGET_DOCROOT inválido: '$TARGET_DOCROOT'. Abortando."
             exit 1
@@ -307,16 +299,12 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy Backend Core to Isolated Directory
-        env:
-          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
-
           RUN_RSYNC() {
             if [ -n "$SSH_KEY" ]; then
-              rsync -avz --chmod=D755,F644 -e "ssh -o StrictHostKeyChecking=no" "$@"
+              rsync -avz --chmod=D755,F644 "$@"
             else
-              rsync -avz --chmod=D755,F644 -e "sshpass -e ssh -o StrictHostKeyChecking=no" "$@"
+              sshpass -p "$SSH_PASSWORD" rsync -avz --chmod=D755,F644 "$@"
             fi
           }
 
@@ -336,18 +324,15 @@ jobs:
             "$BDIR/" production:"$TARGET_BACKEND/"
 
       - name: Configure Remote .env, Generate API Bridge & Set Permissions
-        env:
-          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          export SSHPASS="${SSH_PASSWORD:-$SSHPASS}"
-          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/public_html}"
+          TARGET_DOCROOT="${DOC_ROOT:-/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html}"
           TARGET_BACKEND="${BACKEND_PATH:-/home/$SSH_USER/backend_php}"
 
           chmod +x .github/scripts/remote-deploy.sh
           if [ -n "$SSH_KEY" ]; then
             ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           else
-            sshpass -e ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
+            sshpass -p "$SSH_PASSWORD" ssh production "bash -s -- '$TARGET_BACKEND' '$TARGET_DOCROOT' '$DB_NAME' '$DB_USER' '$DB_PASSWORD'" < .github/scripts/remote-deploy.sh
           fi
 
       - name: Verify Live API Health

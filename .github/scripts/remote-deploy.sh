@@ -15,7 +15,9 @@ if [ -z "$BACKEND_PATH" ] || [ "$BACKEND_PATH" = "/" ] || [ -z "$DOC_ROOT" ] || 
   exit 1
 fi
 
-# 1. Configurar archivo .env en la carpeta privada si no existe
+mkdir -p "$BACKEND_PATH" "$DOC_ROOT"
+
+# 1. Configurar archivo .env en la carpeta privada
 if [ ! -f "$BACKEND_PATH/.env" ]; then
   if [ -f "$BACKEND_PATH/.env.example" ]; then
     cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
@@ -24,19 +26,41 @@ if [ ! -f "$BACKEND_PATH/.env" ]; then
   fi
 fi
 
-# Hostinger requiere localhost para conexiones internas de MySQL (evita error 504)
-sed -i "s/^DB_HOST=.*/DB_HOST=localhost/" "$BACKEND_PATH/.env" 2>/dev/null || true
+# Configuración segura de .env usando PHP CLI (inmune a caracteres especiales como '&', '#', comillas)
+php -r '
+$envFile = $argv[1];
+$dbName  = $argv[2] ?? "";
+$dbUser  = $argv[3] ?? "";
+$dbPass  = $argv[4] ?? "";
 
-# Inyección de secretos de GitHub Actions si están definidos
-if [ -n "$DB_NAME" ]; then
-  sed -i "s/^DB_NAME=.*/DB_NAME=$DB_NAME/" "$BACKEND_PATH/.env" 2>/dev/null || true
-fi
-if [ -n "$DB_USER" ]; then
-  sed -i "s/^DB_USER=.*/DB_USER=$DB_USER/" "$BACKEND_PATH/.env" 2>/dev/null || true
-fi
-if [ -n "$DB_PASSWORD" ]; then
-  sed -i "s/^DB_PASS=.*/DB_PASS=\"$DB_PASSWORD\"/" "$BACKEND_PATH/.env" 2>/dev/null || true
-fi
+if (!file_exists($envFile)) {
+    touch($envFile);
+}
+$content = file_get_contents($envFile);
+
+// Forzar DB_HOST=localhost para Hostinger (evita error 504)
+if (preg_match("/^DB_HOST=.*/m", $content)) {
+    $content = preg_replace("/^DB_HOST=.*/m", "DB_HOST=localhost", $content);
+} else {
+    $content .= "\nDB_HOST=localhost\n";
+}
+
+$vars = [];
+if ($dbName !== "") $vars["DB_NAME"] = $dbName;
+if ($dbUser !== "") $vars["DB_USER"] = $dbUser;
+if ($dbPass !== "") $vars["DB_PASS"] = "\"" . addcslashes($dbPass, "\"\\$") . "\"";
+
+foreach ($vars as $key => $val) {
+    if (preg_match("/^" . $key . "=.*/m", $content)) {
+        $content = preg_replace("/^" . $key . "=.*/m", $key . "=" . $val, $content);
+    } else {
+        $content .= "\n" . $key . "=" . $val . "\n";
+    }
+}
+file_put_contents($envFile, $content);
+echo "[OK] Variables de entorno configuradas exitosamente en $envFile\n";
+' "$BACKEND_PATH/.env" "$DB_NAME" "$DB_USER" "$DB_PASSWORD"
+
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
 # 2. Generar el API Bridge en DOC_ROOT/api y DOC_ROOT/backend_php
@@ -94,7 +118,8 @@ find "$BACKEND_PATH" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$BACKEND_PATH" -type f -exec chmod 644 {} + 2>/dev/null || true
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
-# 4. Asegurar permisos en public_html (elimina el 403 Forbidden de LiteSpeed)
+# 4. Asegurar permisos en el dominio y en public_html (elimina el 403 Forbidden de LiteSpeed)
+chmod 755 "$(dirname "$DOC_ROOT")" 2>/dev/null || true
 chmod 755 "$DOC_ROOT" 2>/dev/null || true
 find "$DOC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$DOC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
