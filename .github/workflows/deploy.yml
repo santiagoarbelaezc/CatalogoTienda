@@ -78,7 +78,20 @@ jobs:
           }
 
           echo "Probando conexión SSH con Hostinger..."
-          RUN_SSH "echo 'SSH exitoso.'"
+          CONNECTED=0
+          for attempt in 1 2 3 4 5; do
+            echo "Intento de conexión $attempt de 5..."
+            if RUN_SSH "echo 'SSH exitoso.'"; then
+              CONNECTED=1
+              break
+            fi
+            echo "Sin respuesta del servidor. Reintentando en 20 segundos..."
+            sleep 20
+          done
+          if [ $CONNECTED -ne 1 ]; then
+            echo "::error::No se pudo conectar por SSH tras 5 intentos. Revisa que el acceso SSH esté activo en hPanel y que el firewall no bloquee las IP de GitHub."
+            exit 1
+          fi
 
           DOC_ROOT="/home/$SSH_USER/domains/catalogo.tiendaintima.com/public_html"
           BACKEND_PATH="/home/$SSH_USER/domains/catalogo.tiendaintima.com/backend_php"
