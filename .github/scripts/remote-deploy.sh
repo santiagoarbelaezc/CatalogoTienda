@@ -19,7 +19,10 @@ mkdir -p "$BACKEND_PATH" "$DOC_ROOT"
 
 # 1. Configurar archivo .env en la carpeta privada
 if [ ! -f "$BACKEND_PATH/.env" ]; then
-  if [ -f "$BACKEND_PATH/.env.example" ]; then
+  if [ -f "$HOME/backend_php/.env" ]; then
+    # Reutilizar el .env de la ubicación anterior (conserva JWT, Cloudinary, Groq, DB)
+    cp "$HOME/backend_php/.env" "$BACKEND_PATH/.env"
+  elif [ -f "$BACKEND_PATH/.env.example" ]; then
     cp "$BACKEND_PATH/.env.example" "$BACKEND_PATH/.env"
   elif [ -f "$DOC_ROOT/.env" ]; then
     cp "$DOC_ROOT/.env" "$BACKEND_PATH/.env"
@@ -53,6 +56,13 @@ fi
 
 echo "[OK] Variables de entorno configuradas exitosamente en $ENV_FILE"
 
+if grep -qE '^DB_NAME=(nombre_de_tu_bd)?$|^DB_USER=(tu_usuario_bd)?$|^DB_PASS="?your_db_password_here"?$' "$ENV_FILE"; then
+  echo "::warning::El .env remoto aún tiene credenciales de BD de ejemplo. Define los secretos DB_NAME, DB_USER y DB_PASSWORD en GitHub o edita $ENV_FILE."
+fi
+if grep -q '^JWT_SECRET=change_this' "$ENV_FILE"; then
+  echo "::warning::JWT_SECRET sigue con el valor de ejemplo en $ENV_FILE."
+fi
+
 chmod 600 "$BACKEND_PATH/.env" 2>/dev/null || true
 
 # 2. Generar el API Bridge en DOC_ROOT/api y DOC_ROOT/backend_php
@@ -85,9 +95,14 @@ EOF_BRIDGE_BODY
 
   PREFIX=$(basename "$BRIDGE_DIR")
   cat << EOF_BRIDGE_HTACCESS > "$BRIDGE_DIR/.htaccess"
-Options -Indexes
+Options -Indexes -MultiViews
+DirectoryIndex index.php
 RewriteEngine On
 RewriteBase /$PREFIX/
+
+# Preservar cabecera Authorization (crítico para JWT en Apache/LiteSpeed)
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 
 # CORS preflight
 RewriteCond %{REQUEST_METHOD} OPTIONS
